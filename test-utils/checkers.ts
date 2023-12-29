@@ -1,8 +1,9 @@
 import { expect } from "chai";
 
 export interface EventFieldCheckingOptions {
-  showValuesInErrorMessage?: boolean
-  caseInsensitiveComparison?: boolean
+  showValuesInErrorMessage?: boolean;
+  caseInsensitiveComparison?: boolean;
+  convertToJson?: boolean;
 }
 
 function checkEventField(
@@ -11,6 +12,10 @@ function checkEventField(
   options: EventFieldCheckingOptions = {}
 ): (value: any) => boolean {
   const f = function (value: any): boolean {
+    if (options.convertToJson) {
+      value = JSON.stringify(value);
+      expectedValue = JSON.stringify(expectedValue);
+    }
     let errorMessage = `The "${fieldName}" field of the event is wrong`;
     if (options.showValuesInErrorMessage) {
       errorMessage += ` (actual: ${value} ; expected: ${expectedValue})`;
@@ -32,6 +37,10 @@ function checkEventFieldNotEqual(
   options: EventFieldCheckingOptions = {}
 ): (value: any) => boolean {
   const f = function (value: any): boolean {
+    if (options.convertToJson) {
+      value = JSON.stringify(value);
+      notExpectedValue = JSON.stringify(notExpectedValue);
+    }
     let errorMessage =
       `The "${fieldName}" field of the event is wrong because it is equal ${notExpectedValue} but should not`;
     if (options.showValuesInErrorMessage) {
