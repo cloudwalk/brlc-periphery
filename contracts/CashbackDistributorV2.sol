@@ -3,7 +3,6 @@
 pragma solidity 0.8.16;
 
 import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import { EnumerableSetUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
 import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import { BlocklistableUpgradeable } from "./base/BlocklistableUpgradeable.sol";
@@ -29,7 +28,6 @@ contract CashbackDistributorV2 is
     ICashbackDistributorV2
 {
     using SafeERC20Upgradeable for IERC20Upgradeable;
-    using EnumerableSetUpgradeable for EnumerableSetUpgradeable.Bytes32Set;
 
     /// @dev The role of this contract owner.
     bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");
@@ -71,9 +69,6 @@ contract CashbackDistributorV2 is
     /// @dev The zero account address has been passed as a function argument.
     error ZeroRecipientAddress();
 
-    /// @dev The total cashback amount for the account has become over the maximum storable value.
-    error AccountTotalCashbackOverflow();
-
     // ------------------- Functions ---------------------------------
 
     /**
@@ -107,7 +102,7 @@ contract CashbackDistributorV2 is
     }
 
     /**
-     * @dev See {ICashbackDistributor-sendCashback}.
+     * @dev See {ICashbackDistributorV2-sendCashback}.
      *
      * Requirements:
      *
@@ -166,8 +161,6 @@ contract CashbackDistributorV2 is
             amount: uint64(amount)
         });
 
-        _nonceCollectionByExternalId[externalId].push(nonce);
-
         emit SendCashback(
             token,
             kind,
@@ -180,7 +173,6 @@ contract CashbackDistributorV2 is
         );
 
         if (status == CashbackStatus.Success || status == CashbackStatus.Partial) {
-            _totalCashbackByTokenAndExternalId[token][externalId] += amount;
             IERC20Upgradeable(token).safeTransfer(recipient, amount);
             sentAmount = amount;
             success = true;
@@ -188,7 +180,7 @@ contract CashbackDistributorV2 is
     }
 
     /**
-     * @dev See {ICashbackDistributor-revokeCashback}.
+     * @dev See {ICashbackDistributorV2-revokeCashback}.
      *
      * Requirements:
      *
@@ -241,15 +233,14 @@ contract CashbackDistributorV2 is
 
         if (revocationStatus == RevocationStatus.Success) {
             cashback.amount = uint64(context.newAmount);
-            _reduceOverallCashback(context.token, context.recipient, amount);
-            _totalCashbackByTokenAndExternalId[context.token][context.externalId] -= amount;
+            _reduceTotalCashback(context.token, context.recipient, amount);
             IERC20Upgradeable(context.token).safeTransferFrom(context.sender, address(this), amount);
             success = true;
         }
     }
 
     /**
-     * @dev See {ICashbackDistributor-increaseCashback}.
+     * @dev See {ICashbackDistributorV2-increaseCashback}.
      *
      * Requirements:
      *
@@ -311,7 +302,6 @@ contract CashbackDistributorV2 is
 
         if (status == IncreaseStatus.Success || status == IncreaseStatus.Partial) {
             cashback.amount = uint64(context.newAmount);
-            _totalCashbackByTokenAndExternalId[context.token][context.externalId] += amount;
             IERC20Upgradeable(context.token).safeTransfer(context.recipient, amount);
             sentAmount = amount;
             success = true;
@@ -319,7 +309,7 @@ contract CashbackDistributorV2 is
     }
 
     /**
-     * @dev See {ICashbackDistributor-enable}.
+     * @dev See {ICashbackDistributorV2-enable}.
      *
      * Requirements:
      *
@@ -336,7 +326,7 @@ contract CashbackDistributorV2 is
     }
 
     /**
-     * @dev See {ICashbackDistributor-disable}.
+     * @dev See {ICashbackDistributorV2-disable}.
      *
      * Requirements:
      *
@@ -353,14 +343,14 @@ contract CashbackDistributorV2 is
     }
 
     /**
-     * @dev See {ICashbackDistributor-enabled}.
+     * @dev See {ICashbackDistributorV2-enabled}.
      */
     function enabled() external view returns (bool) {
         return _enabled;
     }
 
     /**
-     * @dev See {ICashbackDistributor-nextNonce}.
+     * @dev See {ICashbackDistributorV2-nextNonce}.
      */
     function nextNonce() external view returns (uint256) {
         return _nextNonce;
@@ -374,7 +364,7 @@ contract CashbackDistributorV2 is
     }
 
     /**
-     * @dev See {ICashbackDistributor-getCashbacks}.
+     * @dev See {ICashbackDistributorV2-getCashbacks}.
      */
     function getCashbacks(uint256[] calldata nonces) external view returns (Cashback[] memory cashbacks) {
         uint256 len = nonces.length;
@@ -385,44 +375,15 @@ contract CashbackDistributorV2 is
     }
 
     /**
-     * @dev See {ICashbackDistributor-getCashbackNonces}.
-     */
-    function getCashbackNonces(
-        bytes32 externalId,
-        uint256 index,
-        uint256 limit
-    ) external view returns (uint256[] memory nonces) {
-        uint256[] storage nonceArray = _nonceCollectionByExternalId[externalId];
-        uint256 len = nonceArray.length;
-        if (len <= index || limit == 0) {
-            nonces = new uint256[](0);
-        } else {
-            len -= index;
-            if (len > limit) {
-                len = limit;
-            }
-            nonces = new uint256[](len);
-            for (uint256 i = 0; i < len; i++) {
-                nonces[i] = nonceArray[index];
-                index++;
-            }
-        }
-    }
-
-    /**
-     * @dev See {ICashbackDistributor-getTotalCashbackByTokenAndExternalId}.
-     */
-    function getTotalCashbackByTokenAndExternalId(address token, bytes32 externalId) external view returns (uint256) {
-        return _totalCashbackByTokenAndExternalId[token][externalId];
-    }
-
-    /**
-     * @dev See {ICashbackDistributor-getTotalCashbackByTokenAndRecipient}.
+     * @dev See {ICashbackDistributorV2-getTotalCashbackByTokenAndRecipient}.
      */
     function getTotalCashbackByTokenAndRecipient(address token, address recipient) external view returns (uint256) {
         return _accountCashbackStates[token][recipient].totalAmount;
     }
 
+    /**
+     * @dev See {ICashbackDistributorV2-getTotalCashbackByTokenAndRecipient}.
+     */
     function getAccountCashbackState(
         address token,
         address recipient
@@ -430,6 +391,9 @@ contract CashbackDistributorV2 is
         return _accountCashbackStates[token][recipient];
     }
 
+    /**
+     * @dev Updates the account cashback state and checks the cashback cap.
+     */
     function _updateAccountState(
         address token,
         address recipient,
@@ -460,19 +424,18 @@ contract CashbackDistributorV2 is
         if (capPeriodCollectedCashback == 0) {
             capPeriodStartAmount = totalAmount;
         }
-        totalAmount += acceptedAmount;
-        if (totalAmount > type(uint72).max) {
-            revert AccountTotalCashbackOverflow();
-        }
-        // TODO: Check if individual field assignment is cheaper than the whole struct assignment.
+
         _accountCashbackStates[token][recipient] = AccountCashbackState({
-            totalAmount: uint72(totalAmount),
+            totalAmount: uint72(totalAmount) + uint72(acceptedAmount),
             capPeriodStartAmount: uint72(capPeriodStartAmount),
             capPeriodStartTime: uint32(capPeriodStartTime)
         });
     }
 
-    function _reduceOverallCashback(
+    /**
+     * @dev Reduces the total cashback amount for a recipient.
+     */
+    function _reduceTotalCashback(
         address token,
         address recipient,
         uint256 amount

@@ -100,7 +100,7 @@ interface ICashbackDistributorV2Types {
         CashbackStatus status;
     }
 
-    /// @dev Structure with data of cashback for a single account
+    /// @dev Structure with cashback-related data for a single account
     struct AccountCashbackState {
         uint72 totalAmount;
         uint72 capPeriodStartAmount;
@@ -309,28 +309,19 @@ interface ICashbackDistributorV2 is ICashbackDistributorV2Types {
     function getCashbacks(uint256[] calldata nonces) external view returns (Cashback[] memory cashbacks);
 
     /**
-     * @dev Returns an array of cashback nonces associated with an external identifier.
-     * @param externalId The external cashback identifier to return nonces.
-     * @param index The index of the first nonce in the range to return.
-     * @param limit The max number of nonces in the range to return.
-     */
-    function getCashbackNonces(
-        bytes32 externalId,
-        uint256 index,
-        uint256 limit
-    ) external view returns (uint256[] memory);
-
-    /**
-     * @dev Returns the total amount of all the success cashback operations associated with a token and an external ID.
-     * @param token The token contract address of the cashback operations to define the returned total amount.
-     * @param externalId The external identifier of the cashback operations to define the returned total amount.
-     */
-    function getTotalCashbackByTokenAndExternalId(address token, bytes32 externalId) external view returns (uint256);
-
-    /**
      * @dev Returns the total amount of all the success cashback operations associated with a token and a recipient.
      * @param token The token contract address of the cashback operations to define the returned total amount.
      * @param recipient The recipient address of the cashback operations to define the returned total amount.
      */
     function getTotalCashbackByTokenAndRecipient(address token, address recipient) external view returns (uint256);
+
+    /**
+     * @dev Returns a structure with cashback-related data for a single account by a token and a recipient.
+     * @param token The token contract address of the cashback operations.
+     * @param recipient The recipient address of the cashback operations.
+     */
+    function getAccountCashbackState(
+        address token,
+        address recipient
+    ) external view returns (AccountCashbackState memory);
 }

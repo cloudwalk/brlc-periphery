@@ -2,7 +2,6 @@
 
 pragma solidity 0.8.16;
 
-import { EnumerableSetUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
 import { ICashbackDistributorV2Types } from "./interfaces/ICashbackDistributorV2.sol";
 
 /**
@@ -20,12 +19,6 @@ abstract contract CashbackDistributorV2StorageV1 is ICashbackDistributorV2Types 
 
     /// @dev The mapping of an account cashback structure for a given token address and account address.
     mapping(address => mapping(address => AccountCashbackState)) internal _accountCashbackStates;
-
-    /// @dev Mapping of a nonce collection of all the cashback operations for a given external cashback identifier.
-    mapping(bytes32 => uint256[]) internal _nonceCollectionByExternalId;
-
-    /// @dev Mapping of a total amount of success cashback operations for a given token and an external identifier.
-    mapping(address => mapping(bytes32 => uint256)) internal _totalCashbackByTokenAndExternalId;
 }
 
 /**
