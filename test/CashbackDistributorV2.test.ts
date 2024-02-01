@@ -9,6 +9,7 @@ import { Block, TransactionReceipt } from "@ethersproject/abstract-provider";
 import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
 
 const MAX_UINT256 = ethers.constants.MaxUint256;
+const MAX_UINT64 = BigNumber.from("0xffffffffffffffff");
 const MAX_INT256 = ethers.constants.MaxInt256;
 const ZERO_ADDRESS = ethers.constants.AddressZero;
 const ZERO_HASH = ethers.constants.HashZero;
@@ -27,7 +28,6 @@ enum CashbackStatus {
 }
 
 enum IncreaseStatus {
-  Unknown = 0,
   Success = 1,
   Blocklisted = 2,
   OutOfFunds = 3,
@@ -326,55 +326,18 @@ describe("Contract 'CashbackDistributorV2'", async () => {
     // The cashback structure with the zero nonce must be always nonexistent one.
     checkNonexistentCashback(await cashbackDistributor.getCashback(0), 0);
 
-    // Check other structures
-    for (const cashback of cashbacks) {
-      const actualCashback = await cashbackDistributor.getCashback(cashback.nonce);
-      checkEquality(actualCashback, cashback);
+    // Check existent cashback structures
+    const nonces: number[] = cashbacks.map(cashback => cashback.nonce);
+    const actualCashbacks: Record<string, unknown>[] = await cashbackDistributor.getCashbacks(nonces);
+    for (let i = 0; i < cashbacks.length; ++i) {
+      const actualCashback = await cashbackDistributor.getCashback(cashbacks[i].nonce);
+      checkEquality(actualCashback, cashbacks[i]);
+      checkEquality(actualCashbacks[i], cashbacks[i]);
     }
 
     // Check the cashback structure after the last expected one. It must be nonexistent one.
     if (cashbacks.length > 0) {
       checkNonexistentCashback(await cashbackDistributor.getCashback(0), cashbacks[cashbacks.length - 1].nonce);
-    }
-  }
-
-  async function checkCashbackNonceByExternalId(context: TestContext) {
-    const { fixture: { cashbackDistributor }, cashbacks } = context;
-    const expectedMap = new Map<string, BigNumber[]>();
-
-    cashbacks.forEach(cashback => {
-      const nonces: BigNumber[] = expectedMap.get(cashback.externalId) || [];
-      nonces.push(BigNumber.from(cashback.nonce));
-      expectedMap.set(cashback.externalId, nonces);
-    });
-
-    for (const [externalId, expectedNonces] of expectedMap) {
-      expect(await cashbackDistributor.getCashbackNonces(externalId, 0, 50)).to.deep.equal(
-        expectedNonces,
-        `Wrong array of nonces for the external ID ${externalId}`
-      );
-    }
-  }
-
-  async function checkTotalCashbackByTokenAndExternalId(context: TestContext) {
-    const { fixture: { cashbackDistributor }, cashbacks } = context;
-    const expectedMap = new Map<Contract, Map<string, number>>();
-
-    cashbacks.forEach(cashback => {
-      const totalCashbackMap: Map<string, number> = expectedMap.get(cashback.token) || new Map<string, number>();
-      let totalCashback: number = totalCashbackMap.get(cashback.externalId) || 0;
-      totalCashback += cashback.sentAmount - (cashback.revokedAmount || 0);
-      totalCashbackMap.set(cashback.externalId, totalCashback);
-      expectedMap.set(cashback.token, totalCashbackMap);
-    });
-
-    for (const [token, expectedTotalCashbackByExternalId] of expectedMap) {
-      for (const [externalId, expectedTotalCashback] of expectedTotalCashbackByExternalId) {
-        expect(await cashbackDistributor.getTotalCashbackByTokenAndExternalId(token.address, externalId)).to.equal(
-          expectedTotalCashback,
-          `Wrong total cashback for the token with symbol ${await token.symbol()} and external ID ${externalId}`
-        );
-      }
     }
   }
 
@@ -428,8 +391,6 @@ describe("Contract 'CashbackDistributorV2'", async () => {
 
   async function checkCashbackDistributorState(context: TestContext) {
     await checkCashbackStructures(context);
-    await checkCashbackNonceByExternalId(context);
-    await checkTotalCashbackByTokenAndExternalId(context);
     await checkTotalCashbackByTokenAndRecipient(context);
     await checkCashbackDistributorBalanceByTokens(context);
   }
@@ -558,17 +519,18 @@ describe("Contract 'CashbackDistributorV2'", async () => {
   });
 
   describe("Function 'sendCashback()'", async () => {
-    async function checkSending(context: TestContext) {
+    async function checkSending(context: TestContext, specialRequestedAmount?: BigNumber) {
       const { fixture: { cashbackDistributor }, cashbacks } = context;
       const cashback: TestCashback = cashbacks[cashbacks.length - 1];
       const recipientBalanceChange = cashback.sentAmount;
+      const requestedAmount: BigNumber = specialRequestedAmount ?? BigNumber.from(cashback.requestedAmount);
 
       const returnValues = await cashbackDistributor.connect(cashback.sender).callStatic.sendCashback(
         cashback.token.address,
         cashback.kind,
         cashback.externalId,
         cashback.recipient.address,
-        cashback.requestedAmount
+        requestedAmount
       );
 
       await expect(
@@ -577,7 +539,7 @@ describe("Contract 'CashbackDistributorV2'", async () => {
           cashback.kind,
           cashback.externalId,
           cashback.recipient.address,
-          cashback.requestedAmount
+          requestedAmount
         )
       ).to.changeTokenBalances(
         cashback.token,
@@ -592,7 +554,7 @@ describe("Contract 'CashbackDistributorV2'", async () => {
         cashback.status,
         cashback.externalId,
         cashback.recipient.address,
-        cashback.status != CashbackStatus.Partial ? cashback.requestedAmount : cashback.sentAmount,
+        cashback.status != CashbackStatus.Partial ? requestedAmount : cashback.sentAmount,
         cashback.sender.address,
         cashback.nonce
       );
@@ -657,6 +619,15 @@ describe("Contract 'CashbackDistributorV2'", async () => {
           await proveTx(cashbackDistributor.blocklist(cashback.recipient.address));
           cashback.status = CashbackStatus.Blocklisted;
           await checkSending(context);
+        });
+
+        it("The cashback amount is greater than 64-bit unsigned integer", async () => {
+          const context = await beforeSendingCashback();
+          const { cashbacks: [cashback] } = context;
+          cashback.requestedAmount = 0;
+          const specialRequestedAmount = MAX_UINT64.add(1);
+          cashback.status = CashbackStatus.Overflow;
+          await checkSending(context, specialRequestedAmount);
         });
 
         async function prepareCashbackSendingAfterPeriodCapReached(): Promise<TestContext> {
@@ -933,20 +904,26 @@ describe("Contract 'CashbackDistributorV2'", async () => {
   });
 
   describe("Function 'increaseCashback()'", async () => {
-    async function checkIncreasing(targetIncreaseStatus: IncreaseStatus, context: TestContext) {
+    async function checkIncreasing(
+      targetIncreaseStatus: IncreaseStatus,
+      context: TestContext,
+      specialIncreaseRequestedAmount?: BigNumber
+    ) {
       const { fixture: { cashbackDistributor }, cashbacks: [cashback] } = context;
       const recipientBalanceChange = cashback.increaseSentAmount ?? 0;
+      const increaseRequestedAmount: BigNumber =
+        specialIncreaseRequestedAmount ?? BigNumber.from(cashback.increaseRequestedAmount);
 
       const returnValues = await cashbackDistributor.connect(distributor).callStatic.increaseCashback(
         cashback.nonce,
-        cashback.increaseRequestedAmount
+        increaseRequestedAmount
       );
 
       cashback.requestedAmount += recipientBalanceChange;
       cashback.sentAmount += recipientBalanceChange;
 
       await expect(
-        cashbackDistributor.connect(distributor).increaseCashback(cashback.nonce, cashback.increaseRequestedAmount)
+        cashbackDistributor.connect(distributor).increaseCashback(cashback.nonce, increaseRequestedAmount)
       ).to.changeTokenBalances(
         cashback.token,
         [cashbackDistributor, cashback.recipient, cashback.sender],
@@ -962,7 +939,7 @@ describe("Contract 'CashbackDistributorV2'", async () => {
         cashback.externalId,
         cashback.recipient.address,
         targetIncreaseStatus != IncreaseStatus.Partial
-          ? cashback.increaseRequestedAmount
+          ? increaseRequestedAmount
           : cashback.increaseSentAmount,
         cashback.sentAmount - (cashback.revokedAmount ?? 0), // totalAmount
         distributor.address,
@@ -1052,6 +1029,15 @@ describe("Contract 'CashbackDistributorV2'", async () => {
           await checkIncreasing(IncreaseStatus.Blocklisted, context);
         });
 
+        it("The result cashback amount is greater than 64-bit unsigned integer", async () => {
+          const context = await beforeSendingCashback();
+          const { cashbacks: [cashback] } = context;
+          const specialIncreaseRequestedAmount: BigNumber = MAX_UINT64.add(1).sub(cashback.requestedAmount);
+          cashback.increaseRequestedAmount = 0;
+          await prepareIncrease(context);
+          await checkIncreasing(IncreaseStatus.Overflow, context, specialIncreaseRequestedAmount);
+        });
+
         it("The initial cashback operations failed", async () => {
           const context = await beforeSendingCashback();
           const { fixture: { cashbackDistributor }, cashbacks: [cashback] } = context;
@@ -1095,67 +1081,6 @@ describe("Contract 'CashbackDistributorV2'", async () => {
           cashbackDistributor.increaseCashback(cashback.nonce, cashback.revokedAmount)
         ).to.be.revertedWith(createRevertMessageDueToMissingRole(deployer.address, distributorRole));
       });
-    });
-  });
-
-  describe("Getter functions 'getCashbackNonces()' and 'getCashbacks()'", async () => {
-    it("Execute as expected", async () => {
-      const fixture: Fixture = await setUpFixture(deployAndConfigureAllContracts);
-      const { cashbackDistributor, tokenMocks: [tokenMock] } = fixture;
-      const cashbacks: TestCashback[] = [1, 2, 3].map(nonceValue => {
-        return {
-          token: tokenMock,
-          kind: CashbackKind.CardPayment,
-          status: CashbackStatus.Nonexistent,
-          externalId: CASHBACK_EXTERNAL_ID_STUB1,
-          recipient: user,
-          requestedAmount: 100 + nonceValue,
-          sentAmount: 0,
-          sender: distributor,
-          nonce: nonceValue
-        };
-      });
-      const cashbackNonces: BigNumber[] = cashbacks.map(cashback => BigNumber.from(cashback.nonce));
-      await setUpContractsForSendingCashbacks(cashbackDistributor, cashbacks);
-      await sendCashbacks(cashbackDistributor, cashbacks, CashbackStatus.Success);
-
-      // Check existing cashbacks
-      let actualCashbacks: Record<string, unknown>[] = await cashbackDistributor.getCashbacks(cashbackNonces);
-      expect(actualCashbacks.length).to.equal(cashbacks.length);
-      cashbacks.forEach(cashback => {
-        checkEquality(actualCashbacks[cashback.nonce - 1], cashback);
-      });
-
-      // Check nonexistent cashbacks
-      const nonceAfterExistingCashbacks: number = cashbacks.length + 1;
-      actualCashbacks = await cashbackDistributor.getCashbacks([0, nonceAfterExistingCashbacks]);
-      expect(actualCashbacks.length).to.equal(2);
-      checkNonexistentCashback(actualCashbacks[0], 0);
-      checkNonexistentCashback(actualCashbacks[1], nonceAfterExistingCashbacks);
-
-      // Check getting of cashback nonces in different cases
-      let actualNonces: BigNumber[];
-
-      actualNonces = await cashbackDistributor.getCashbackNonces(CASHBACK_EXTERNAL_ID_STUB1, 0, 50);
-      expect(actualNonces).to.be.deep.equal(cashbackNonces);
-
-      actualNonces = await cashbackDistributor.getCashbackNonces(CASHBACK_EXTERNAL_ID_STUB1, 0, 2);
-      expect(actualNonces).to.be.deep.equal([cashbackNonces[0], cashbackNonces[1]]);
-
-      actualNonces = await cashbackDistributor.getCashbackNonces(CASHBACK_EXTERNAL_ID_STUB1, 1, 2);
-      expect(actualNonces).to.be.deep.equal([cashbackNonces[1], cashbackNonces[2]]);
-
-      actualNonces = await cashbackDistributor.getCashbackNonces(CASHBACK_EXTERNAL_ID_STUB1, 1, 1);
-      expect(actualNonces).to.be.deep.equal([cashbackNonces[1]]);
-
-      actualNonces = await cashbackDistributor.getCashbackNonces(CASHBACK_EXTERNAL_ID_STUB1, 1, 50);
-      expect(actualNonces).to.be.deep.equal([cashbackNonces[1], cashbackNonces[2]]);
-
-      actualNonces = await cashbackDistributor.getCashbackNonces(CASHBACK_EXTERNAL_ID_STUB1, 3, 50);
-      expect(actualNonces).to.be.deep.equal([]);
-
-      actualNonces = await cashbackDistributor.getCashbackNonces(CASHBACK_EXTERNAL_ID_STUB1, 1, 0);
-      expect(actualNonces).to.be.deep.equal([]);
     });
   });
 
