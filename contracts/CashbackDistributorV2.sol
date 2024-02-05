@@ -152,14 +152,13 @@ contract CashbackDistributorV2 is
         address sender = _msgSender();
         nonce = _nextNonce++;
 
-        _cashbacks[nonce] = Cashback({
-            token: token,
-            externalId: externalId,
-            recipient: recipient,
-            kind: kind,
-            status: status,
-            amount: uint64(amount)
-        });
+        Cashback storage cashback = _cashbacks[nonce];
+        cashback.token = token;
+        cashback.externalId = externalId;
+        cashback.recipient = recipient;
+        cashback.kind = kind;
+        cashback.status = status;
+        cashback.amount = uint64(amount);
 
         emit SendCashback(
             token,
