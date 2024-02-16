@@ -15,22 +15,20 @@ abstract contract CardPaymentProcessorV2StorageV1 is ICardPaymentProcessorV2Type
     /// @dev The enable flag of the cashback operations.
     bool internal _cashbackEnabled;
 
-    /// @dev The current cashback rate in units of `CASHBACK_FACTOR`..
+    /// @dev The current cashback rate in units of `CASHBACK_FACTOR`.
     uint16 internal _cashbackRate;
 
     /// @dev The account to transfer confirmed tokens to.
     address internal _cashOutAccount;
 
-    /// @dev Mapping of a payment for a given payment ID.
+    /// @dev The mapping of a payment for a given payment ID.
     mapping(bytes32 => Payment) internal _payments;
 
-    /// @dev The address of the cashback distributor contract.
-    address internal _cashbackDistributor;
-
-    /// @dev Mapping of a structure with cashback data for a given payment ID.
-    mapping(bytes32 => Cashback) internal _cashbacks;
-
+    /// @dev The payment statistics.
     PaymentStatistics internal _paymentStatistics;
+
+    /// @dev The mapping of an account cashback structure for a given account address.
+    mapping(address => AccountCashbackState) internal _accountCashbackStates;
 }
 
 /**

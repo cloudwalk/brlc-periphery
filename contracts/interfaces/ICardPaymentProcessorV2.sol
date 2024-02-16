@@ -47,6 +47,8 @@ interface ICardPaymentProcessorV2Types {
      *  - payerRefundAmount = refundAmount - sponsorRefundAmount.
      *  - payerRemainder = payerSumAmount - payerRefundAmount.
      *  - sponsorRemainder = sumAmount - payerSumAmount - payerRemainder.
+     *  - confirmedCashback = unconfirmedAmount < cashbackAmount ? cashbackAmount - unconfirmedAmount : 0.
+     *  - unconfirmedCashback = cashbackAmount - confirmedCashback.
      */
     // DEV Type `uint64` allows us execute payments up to 1.8E13 BRLC. I believe, instead of that, we can use `uint56` (up to 72E9 BRLC) or even `uint48` (up to 281M BRLC). It will save more storage.
     struct Payment {
@@ -75,8 +77,11 @@ interface ICardPaymentProcessorV2Types {
 
     /// @dev Structure with statistics of all payments
     struct PaymentStatistics {
+        // Slot 1
         uint128 totalUnconfirmedRemainder; // The total remainder of all payments that are not confirmed yet.
-        uint128 reserve;                   // The reserved filed for future changes.
+        uint128 totalUnconfirmedCashback;  // The total cashback of all payments that are not confirmed yet.
+        // Slot 2
+        uint256 reserve;                  // The reserved filed for future changes.
     }
 }
 
