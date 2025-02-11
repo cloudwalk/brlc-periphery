@@ -2,7 +2,7 @@ apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
   name: brlc-periphery
-  description: BRLC periphery smart contracts
+  description: Periphery smart contracts
   annotations:
     github.com/project-slug: cloudwalk/brlc-periphery
     backstage.io/techdocs-ref: dir:.
