@@ -98,7 +98,7 @@ contract Dispatcher is
 
     /**
      * @dev Initializes the liquidity mover role for a batch of accounts and
-     *      sets the owner role as the default admin for the liquidity mover role.
+     *      sets the owner role as the admin for the liquidity mover role.
      *
      * Requirements:
      *
@@ -120,7 +120,7 @@ contract Dispatcher is
 
     /**
      * @dev Removes the liquidity mover role for a batch of accounts
-     *      and sets the default admin role for the liquidity mover role.
+     *      and sets the default role as the admin for the liquidity mover role.
      *
      * Requirements:
      *

@@ -51,7 +51,10 @@ contract CompoundAgentMock {
     // ------------------ Functions -------------------------------- //
 
     /**
-     * @dev Imitates the same-name function of the CompoundAgent smart-contract. Just emits an event about the call.
+     * @dev Imitates the same-name function of the CompoundAgent smart-contract.
+     *
+     * Just emits an event about the call and manage allowance for token transfers from the contract.
+     *
      * @param newOwner The address of the new owner.
      */
     function transferOwnership(address newOwner) external {
