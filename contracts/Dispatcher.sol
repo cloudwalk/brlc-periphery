@@ -2,6 +2,8 @@
 
 pragma solidity 0.8.24;
 
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
 import { AccessControlExtUpgradeable } from "./base/AccessControlExtUpgradeable.sol";
 import { PausableExtUpgradeable } from "./base/PausableExtUpgradeable.sol";
 import { RescuableUpgradeable } from "./base/RescuableUpgradeable.sol";
@@ -14,6 +16,13 @@ import { DispatcherStorage } from "./DispatcherStorage.sol";
 interface ICompoundAgent {
     function transferOwnership(address newOwner) external;
     function configureAdmin(address account, bool newStatus) external;
+    function redeemUnderlying(uint256 redeemAmount) external;
+}
+
+/// @dev Interface for the liquidity pool contract from the `CapybaraFinance` protocol with the necessary functions.
+interface ILiquidityPool {
+    function deposit(uint256 amount) external;
+    function token() external view returns (address);
 }
 
 /**
@@ -34,10 +43,16 @@ contract Dispatcher is
     /// @dev The role of this contract owner.
     bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");
 
+    /// @dev The role that allows to move liquidity from Compound to Capybara.
+    bytes32 public constant LIQUIDITY_MOVER_ROLE = keccak256("LIQUIDITY_MOVER_ROLE");
+
     // ------------------ Errors ---------------------------------- //
 
     /// @dev Thrown if the provided new implementation address is not of a dispatcher contract.
     error Dispatcher_ImplementationAddressInvalid();
+
+    /// @dev Thrown if the provided account address is zero.
+    error Dispatcher_AccountAddressZero();
 
     // ------------------ Initializers ---------------------------- //
 
@@ -82,6 +97,50 @@ contract Dispatcher is
     // ------------------ Functions ------------------------------- //
 
     /**
+     * @dev Initializes the liquidity mover role for a batch of accounts and
+     *      sets the owner role as the admin for the liquidity mover role.
+     *
+     * Requirements:
+     *
+     * - The caller must have the {OWNER_ROLE} role.
+     *
+     * @param accounts The addresses of the accounts to initialize the liquidity mover role for.
+     */
+    function initLiquidityMoverRole(address[] calldata accounts) external onlyRole(OWNER_ROLE) {
+        _setRoleAdmin(LIQUIDITY_MOVER_ROLE, OWNER_ROLE);
+        uint256 len = accounts.length;
+        for (uint256 i = 0; i < len; ++i) {
+            address account = accounts[i];
+            if (account == address(0)) {
+                revert Dispatcher_AccountAddressZero();
+            }
+            _grantRole(LIQUIDITY_MOVER_ROLE, account);
+        }
+    }
+
+    /**
+     * @dev Removes the liquidity mover role for a batch of accounts
+     *      and sets the default role as the admin for the liquidity mover role.
+     *
+     * Requirements:
+     *
+     * - The caller must have the {OWNER_ROLE} role.
+     *
+     * @param accounts The addresses of the accounts to remove the liquidity mover role for.
+     */
+    function removeLiquidityMoverRole(address[] calldata accounts) external onlyRole(OWNER_ROLE) {
+        uint256 len = accounts.length;
+        for (uint256 i = 0; i < len; ++i) {
+            address account = accounts[i];
+            if (account == address(0)) {
+                revert Dispatcher_AccountAddressZero();
+            }
+            _revokeRole(LIQUIDITY_MOVER_ROLE, account);
+        }
+        _setRoleAdmin(LIQUIDITY_MOVER_ROLE, DEFAULT_ADMIN_ROLE);
+    }
+
+    /**
      * @dev Transfers ownership of a CompoundAgent contract to a new owner.
      *
      * Requirements:
@@ -120,6 +179,30 @@ contract Dispatcher is
         for (uint256 i = 0; i < counter; ++i) {
             ICompoundAgent(compoundAgent).configureAdmin(accounts[i], newStatus);
         }
+    }
+
+    /**
+     * @dev Moves liquidity from a CompoundAgent contract to a liquidity pool of the `CapybaraFinance` protocol.
+     *
+     * Requirements:
+     *
+     * - The contract must not be paused.
+     * - The caller must have the {LIQUIDITY_MOVER_ROLE} role.
+     *  
+     * @param amount The amount of liquidity to move.
+     * @param compoundAgent The address of the CompoundAgent contract to move liquidity from.
+     * @param capybaraLiquidityPool The address of the liquidity pool to move liquidity to.
+     */
+    function moveLiquidityFromCompoundToCapybara(
+        uint256 amount,
+        address compoundAgent,
+        address capybaraLiquidityPool
+    ) external whenNotPaused onlyRole(LIQUIDITY_MOVER_ROLE) {
+        address underlyingToken = ILiquidityPool(capybaraLiquidityPool).token();
+        ICompoundAgent(compoundAgent).redeemUnderlying(amount);
+        IERC20(underlyingToken).transferFrom(compoundAgent, address(this), amount);
+        IERC20(underlyingToken).approve(capybaraLiquidityPool, amount);
+        ILiquidityPool(capybaraLiquidityPool).deposit(amount);
     }
 
     // ------------------ Pure functions -------------------------- //
