@@ -17,7 +17,7 @@ metadata:
       icon: github
   labels:
     cloudwalk.io/regulation-scope: none
-    cloudwalk.io/critical-level: high
+    cloudwalk.io/critical-level: low
 spec:
   type: smart-contract
   system: Blockchain
