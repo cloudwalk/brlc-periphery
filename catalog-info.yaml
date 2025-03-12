@@ -15,6 +15,9 @@ metadata:
     - url: https://github.com/cloudwalk/brlc-periphery
       title: Repository
       icon: github
+  labels:
+    cloudwalk.io/regulation-scope: none
+    cloudwalk.io/critical-level: low
 spec:
   type: smart-contract
   system: Blockchain
