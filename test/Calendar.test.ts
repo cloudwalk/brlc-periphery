@@ -2,7 +2,7 @@ import { ethers } from "hardhat";
 import { expect } from "chai";
 import { Contract, ContractFactory } from "ethers";
 
-interface Date {
+interface SimpleDate {
   year: number;
   month: number;
   day: number;
@@ -10,14 +10,24 @@ interface Date {
 
 // Errors of the contracts under test
 const ERROR_NAME_CALENDAR_TIMESTAMP_INVALID = "Calendar_TimestampInvalid";
+const ERROR_NAME_CALENDAR_DATE_INVALID = "Calendar_DateInvalid";
 
-function parseDate(datetimeString: string): Date {
+function parseDate(datetimeString: string): SimpleDate {
   const [year, month, day] = datetimeString.split(/[- ]/).map(Number);
   return { year, month, day };
 }
 
 function toUnixTimestamp(year: number, month: number, day: number): number {
   return Math.floor(Date.UTC(year, month - 1, day) / 1000);
+}
+
+function fromUnixTimestamp(timestamp: number): SimpleDate {
+  const date = new Date(timestamp * 1000);
+  const year = date.getUTCFullYear();
+  const month = date.getUTCMonth() + 1;
+  const day = date.getUTCDate();
+
+  return { year, month, day };
 }
 
 describe("Library 'Dispatcher'", async () => {
@@ -30,8 +40,7 @@ describe("Library 'Dispatcher'", async () => {
   });
 
   describe("Function 'timestampToDate()'", async () => {
-    async function executeAndCheck(timestamp: number, expectedDateString: string) {
-      const expectedDate: Date = parseDate(expectedDateString);
+    async function executeAndCheckConversion(timestamp: number, expectedDate: SimpleDate) {
       const tx = calendar.timestampToDate(timestamp);
       await expect(tx).to.emit(calendar, "MockTimestampToDateCalled").withArgs(
         timestamp,
@@ -42,63 +51,79 @@ describe("Library 'Dispatcher'", async () => {
     }
 
     it("Executes as expected in different cases", async () => {
-      await executeAndCheck(951868800, "2000-03-01 00:00:00");
-      await executeAndCheck(3976300799, "2096-01-01 23:59:59");
-      await executeAndCheck(3978806400, "2096-01-31 00:00:00");
-      await executeAndCheck(3978892800, "2096-02-01 00:00:00");
-      await executeAndCheck(3981312000, "2096-02-29 00:00:00");
-      await executeAndCheck(3981398400, "2096-03-01 00:00:00");
-      await executeAndCheck(3983990400, "2096-03-31 00:00:00");
-      await executeAndCheck(3984076800, "2096-04-01 00:00:00");
-      await executeAndCheck(3986582400, "2096-04-30 00:00:00");
-      await executeAndCheck(3986668800, "2096-05-01 00:00:00");
-      await executeAndCheck(3989260800, "2096-05-31 00:00:00");
-      await executeAndCheck(3989347200, "2096-06-01 00:00:00");
-      await executeAndCheck(3991852800, "2096-06-30 00:00:00");
-      await executeAndCheck(3991939200, "2096-07-01 00:00:00");
-      await executeAndCheck(3994531200, "2096-07-31 00:00:00");
-      await executeAndCheck(3994617600, "2096-08-01 00:00:00");
-      await executeAndCheck(3997209600, "2096-08-31 00:00:00");
-      await executeAndCheck(3997296000, "2096-09-01 00:00:00");
-      await executeAndCheck(3999801600, "2096-09-30 00:00:00");
-      await executeAndCheck(3999888000, "2096-10-01 00:00:00");
-      await executeAndCheck(4002480000, "2096-10-31 00:00:00");
-      await executeAndCheck(4002566400, "2096-11-01 00:00:00");
-      await executeAndCheck(4005158400, "2096-12-01 00:00:00");
-      await executeAndCheck(4007750400, "2096-12-31 00:00:00");
-      await executeAndCheck(4102444800, "2100-01-01 00:00:00");
-      await executeAndCheck(4107456000, "2100-02-28 00:00:00");
-      await executeAndCheck(4133894400, "2100-12-31 00:00:00");
-      await executeAndCheck(7258118400, "2200-01-01 00:00:00");
-      await executeAndCheck(7263129600, "2200-02-28 00:00:00");
-      await executeAndCheck(7289568000, "2200-12-31 00:00:00");
-      await executeAndCheck(13443235200, "2396-01-01 00:00:00");
-      await executeAndCheck(13448332800, "2396-02-29 00:00:00");
-      await executeAndCheck(13474771200, "2396-12-31 00:00:00");
-      await executeAndCheck(13542940800, "2399-02-28 00:00:00");
-      await executeAndCheck(13569379200, "2399-12-31 00:00:00");
+      await executeAndCheckConversion(951868800, parseDate("2000-03-01 00:00:00"));
+      await executeAndCheckConversion(3976300799, parseDate("2096-01-01 23:59:59"));
+      await executeAndCheckConversion(3978806400, parseDate("2096-01-31 00:00:00"));
+      await executeAndCheckConversion(3978892800, parseDate("2096-02-01 00:00:00"));
+      await executeAndCheckConversion(3981312000, parseDate("2096-02-29 00:00:00"));
+      await executeAndCheckConversion(3981398400, parseDate("2096-03-01 00:00:00"));
+      await executeAndCheckConversion(3983990400, parseDate("2096-03-31 00:00:00"));
+      await executeAndCheckConversion(3984076800, parseDate("2096-04-01 00:00:00"));
+      await executeAndCheckConversion(3986582400, parseDate("2096-04-30 00:00:00"));
+      await executeAndCheckConversion(3986668800, parseDate("2096-05-01 00:00:00"));
+      await executeAndCheckConversion(3989260800, parseDate("2096-05-31 00:00:00"));
+      await executeAndCheckConversion(3989347200, parseDate("2096-06-01 00:00:00"));
+      await executeAndCheckConversion(3991852800, parseDate("2096-06-30 00:00:00"));
+      await executeAndCheckConversion(3991939200, parseDate("2096-07-01 00:00:00"));
+      await executeAndCheckConversion(3994531200, parseDate("2096-07-31 00:00:00"));
+      await executeAndCheckConversion(3994617600, parseDate("2096-08-01 00:00:00"));
+      await executeAndCheckConversion(3997209600, parseDate("2096-08-31 00:00:00"));
+      await executeAndCheckConversion(3997296000, parseDate("2096-09-01 00:00:00"));
+      await executeAndCheckConversion(3999801600, parseDate("2096-09-30 00:00:00"));
+      await executeAndCheckConversion(3999888000, parseDate("2096-10-01 00:00:00"));
+      await executeAndCheckConversion(4002480000, parseDate("2096-10-31 00:00:00"));
+      await executeAndCheckConversion(4002566400, parseDate("2096-11-01 00:00:00"));
+      await executeAndCheckConversion(4005158400, parseDate("2096-12-01 00:00:00"));
+      await executeAndCheckConversion(4007750400, parseDate("2096-12-31 00:00:00"));
+      await executeAndCheckConversion(4102444800, parseDate("2100-01-01 00:00:00"));
+      await executeAndCheckConversion(4107456000, parseDate("2100-02-28 00:00:00"));
+      await executeAndCheckConversion(4133894400, parseDate("2100-12-31 00:00:00"));
+      await executeAndCheckConversion(7258118400, parseDate("2200-01-01 00:00:00"));
+      await executeAndCheckConversion(7263129600, parseDate("2200-02-28 00:00:00"));
+      await executeAndCheckConversion(7289568000, parseDate("2200-12-31 00:00:00"));
+      await executeAndCheckConversion(13443235200, parseDate("2396-01-01 00:00:00"));
+      await executeAndCheckConversion(13448332800, parseDate("2396-02-29 00:00:00"));
+      await executeAndCheckConversion(13474771200, parseDate("2396-12-31 00:00:00"));
+      await executeAndCheckConversion(13542940800, parseDate("2399-02-28 00:00:00"));
+      await executeAndCheckConversion(13569379200, parseDate("2399-12-31 00:00:00"));
     });
 
     // This test is long and detailed, so it is skipped by default. It is intended for one-time checking if needed
-    it.skip("Executes with timestamp of every month", async () => {
-      let d = 1;
-      for (let y = 2001; y < 2400; ++y) {
-        for (let m = 1; m < 13; ++m) {
-          const dateString =
-            "" + y + "-" + m.toString().padStart(2, "0") +
-            "-" + d.toString().padStart(2, "0") +
-            " 00:00:00";
-          const timestamp = toUnixTimestamp(y, m, d);
-          await executeAndCheck(timestamp, dateString);
-          ++d;
-          if (d > 28) {
-            d = 1;
-          }
+    it.skip("Executes as expected for every day in special date ranges", async () => {
+      async function checkForTimestampRange(props: { startTimestamp: number; lastTimestamp: number }) {
+        for (let timestamp = props.startTimestamp; timestamp <= props.lastTimestamp; timestamp += 86400) {
+          const date: SimpleDate = fromUnixTimestamp(timestamp);
+          await executeAndCheckConversion(timestamp, date);
         }
       }
+
+      await checkForTimestampRange({
+        startTimestamp: 951868800, // 2000-03-01 00:00:00
+        lastTimestamp: 1109635200 // 2005-03-01 00:00:00
+      });
+
+      await checkForTimestampRange({
+        startTimestamp: 2498169600, // 2049-03-01 00:00:00
+        lastTimestamp: 2561241600 // 2051-03-01 00:00:00
+      });
+
+      await checkForTimestampRange({
+        startTimestamp: 4076006400, // 2099-03-01 00:00:00
+        lastTimestamp: 4139078400 // 2101-03-01 00:00:00
+      });
+
+      await checkForTimestampRange({
+        startTimestamp: 10387353600, // 2299-03-01 00:00:00
+        lastTimestamp: 10450425600 // 2301-03-01 00:00:00
+      });
+
+      await checkForTimestampRange({
+        startTimestamp: 13506307200, // 2397-12-31 00:00:00
+        lastTimestamp: 13569379200 // 2399-12-31 00:00:00
+      });
     });
 
-    it("Executes if a timestamp is our of range", async () => {
+    it("Executes if a timestamp is out of range", async () => {
       let timestamp = toUnixTimestamp(2000, 2, 29) + 24 * 60 * 60 - 1;
       await expect(calendar.timestampToDate(timestamp))
         .to.revertedWithCustomError(calendar, ERROR_NAME_CALENDAR_TIMESTAMP_INVALID)
@@ -108,6 +133,123 @@ describe("Library 'Dispatcher'", async () => {
       await expect(calendar.timestampToDate(timestamp))
         .to.revertedWithCustomError(calendar, ERROR_NAME_CALENDAR_TIMESTAMP_INVALID)
         .withArgs(timestamp);
+    });
+  });
+
+  describe("Function 'dateToTimestamp()'", async () => {
+    async function executeAndCheckInverseConversion(expectedTimestamp: number, date: SimpleDate) {
+      const tx = calendar.dateToTimestamp(date.year, date.month, date.day);
+      await expect(tx).to.emit(calendar, "MockDateToTimestampCalled").withArgs(
+        date.year,
+        date.month,
+        date.day,
+        expectedTimestamp
+      );
+    }
+
+    it("Executes as expected in different cases", async () => {
+      await executeAndCheckInverseConversion(951868800, parseDate("2000-03-01 00:00:00"));
+      await executeAndCheckInverseConversion(3976214400, parseDate("2096-01-01 00:00:00"));
+      await executeAndCheckInverseConversion(3978806400, parseDate("2096-01-31 00:00:00"));
+      await executeAndCheckInverseConversion(3978892800, parseDate("2096-02-01 00:00:00"));
+      await executeAndCheckInverseConversion(3981312000, parseDate("2096-02-29 00:00:00"));
+      await executeAndCheckInverseConversion(3981398400, parseDate("2096-03-01 00:00:00"));
+      await executeAndCheckInverseConversion(3983990400, parseDate("2096-03-31 00:00:00"));
+      await executeAndCheckInverseConversion(3984076800, parseDate("2096-04-01 00:00:00"));
+      await executeAndCheckInverseConversion(3986582400, parseDate("2096-04-30 00:00:00"));
+      await executeAndCheckInverseConversion(3986668800, parseDate("2096-05-01 00:00:00"));
+      await executeAndCheckInverseConversion(3989260800, parseDate("2096-05-31 00:00:00"));
+      await executeAndCheckInverseConversion(3989347200, parseDate("2096-06-01 00:00:00"));
+      await executeAndCheckInverseConversion(3991852800, parseDate("2096-06-30 00:00:00"));
+      await executeAndCheckInverseConversion(3991939200, parseDate("2096-07-01 00:00:00"));
+      await executeAndCheckInverseConversion(3994531200, parseDate("2096-07-31 00:00:00"));
+      await executeAndCheckInverseConversion(3994617600, parseDate("2096-08-01 00:00:00"));
+      await executeAndCheckInverseConversion(3997209600, parseDate("2096-08-31 00:00:00"));
+      await executeAndCheckInverseConversion(3997296000, parseDate("2096-09-01 00:00:00"));
+      await executeAndCheckInverseConversion(3999801600, parseDate("2096-09-30 00:00:00"));
+      await executeAndCheckInverseConversion(3999888000, parseDate("2096-10-01 00:00:00"));
+      await executeAndCheckInverseConversion(4002480000, parseDate("2096-10-31 00:00:00"));
+      await executeAndCheckInverseConversion(4002566400, parseDate("2096-11-01 00:00:00"));
+      await executeAndCheckInverseConversion(4005158400, parseDate("2096-12-01 00:00:00"));
+      await executeAndCheckInverseConversion(4007750400, parseDate("2096-12-31 00:00:00"));
+      await executeAndCheckInverseConversion(4102444800, parseDate("2100-01-01 00:00:00"));
+      await executeAndCheckInverseConversion(4107456000, parseDate("2100-02-28 00:00:00"));
+      await executeAndCheckInverseConversion(4133894400, parseDate("2100-12-31 00:00:00"));
+      await executeAndCheckInverseConversion(7258118400, parseDate("2200-01-01 00:00:00"));
+      await executeAndCheckInverseConversion(7263129600, parseDate("2200-02-28 00:00:00"));
+      await executeAndCheckInverseConversion(7289568000, parseDate("2200-12-31 00:00:00"));
+      await executeAndCheckInverseConversion(13443235200, parseDate("2396-01-01 00:00:00"));
+      await executeAndCheckInverseConversion(13448332800, parseDate("2396-02-29 00:00:00"));
+      await executeAndCheckInverseConversion(13474771200, parseDate("2396-12-31 00:00:00"));
+      await executeAndCheckInverseConversion(13542940800, parseDate("2399-02-28 00:00:00"));
+      await executeAndCheckInverseConversion(13569379200, parseDate("2399-12-31 00:00:00"));
+    });
+
+    // This test is long and detailed, so it is skipped by default. It is intended for one-time checking if needed
+    it.skip("Executes as expected for every day in special date ranges", async () => {
+      async function checkForTimestampRange(props: { startTimestamp: number; lastTimestamp: number }) {
+        for (let timestamp = props.startTimestamp; timestamp <= props.lastTimestamp; timestamp += 86400) {
+          const date: SimpleDate = fromUnixTimestamp(timestamp);
+          await executeAndCheckInverseConversion(timestamp, date);
+        }
+      }
+
+      await checkForTimestampRange({
+        startTimestamp: 951868800, // 2000-03-01 00:00:00
+        lastTimestamp: 1109635200 // 2005-03-01 00:00:00
+      });
+
+      await checkForTimestampRange({
+        startTimestamp: 2498169600, // 2049-03-01 00:00:00
+        lastTimestamp: 2561241600 // 2051-03-01 00:00:00
+      });
+
+      await checkForTimestampRange({
+        startTimestamp: 4076006400, // 2099-03-01 00:00:00
+        lastTimestamp: 4139078400 // 2101-03-01 00:00:00
+      });
+
+      await checkForTimestampRange({
+        startTimestamp: 10387353600, // 2299-03-01 00:00:00
+        lastTimestamp: 10450425600 // 2301-03-01 00:00:00
+      });
+
+      await checkForTimestampRange({
+        startTimestamp: 13543027200, // 2399-03-01 00:00:00
+        lastTimestamp: 13606185600 // 2401-03-01 00:00:00
+      });
+    });
+
+    it("Executes if a date is invalid", async () => {
+      // The year is less than 2000
+      let date: SimpleDate = parseDate("1999-03-01");
+      await expect(calendar.dateToTimestamp(date.year, date.month, date.day))
+        .to.revertedWithCustomError(calendar, ERROR_NAME_CALENDAR_DATE_INVALID)
+        .withArgs(date.year, date.month, date.day);
+
+      // The month is zero
+      date = parseDate("2000-00-29");
+      await expect(calendar.dateToTimestamp(date.year, date.month, date.day))
+        .to.revertedWithCustomError(calendar, ERROR_NAME_CALENDAR_DATE_INVALID)
+        .withArgs(date.year, date.month, date.day);
+
+      // The day is zero
+      date = parseDate("2000-03-00");
+      await expect(calendar.dateToTimestamp(date.year, date.month, date.day))
+        .to.revertedWithCustomError(calendar, ERROR_NAME_CALENDAR_DATE_INVALID)
+        .withArgs(date.year, date.month, date.day);
+
+      // The day is more than 31
+      date = parseDate("2000-03-32");
+      await expect(calendar.dateToTimestamp(date.year, date.month, date.day))
+        .to.revertedWithCustomError(calendar, ERROR_NAME_CALENDAR_DATE_INVALID)
+        .withArgs(date.year, date.month, date.day);
+
+      // The date is earlier than 2000-03-01
+      date = parseDate("2000-02-29");
+      await expect(calendar.dateToTimestamp(date.year, date.month, date.day))
+        .to.revertedWithCustomError(calendar, ERROR_NAME_CALENDAR_DATE_INVALID)
+        .withArgs(date.year, date.month, date.day);
     });
   });
 });

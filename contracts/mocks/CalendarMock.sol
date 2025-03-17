@@ -20,14 +20,31 @@ contract CalendarMock {
         uint256 day
     );
 
+    /// @dev Emitted when the timestamp calculation function is called with the input parameters and result.
+    event MockDateToTimestampCalled(
+        uint256 year, // Tools: this comment prevents Prettier from formatting into a single line.
+        uint256 month,
+        uint256 day,
+        uint256 timestamp
+    );
+
     // ------------------ Transactional Functions ----------------- //
 
     /**
-     * @dev Converts a timestamp to a date and emits an event with the result.
+     * @dev Converts a timestamp to the related date and emits an event with the result.
      * @param timestamp The timestamp to convert.
      */
     function timestampToDate(uint256 timestamp) external {
         (uint256 year, uint256 month, uint256 day) = Calendar.timestampToDate(timestamp);
         emit MockTimestampToDateCalled(timestamp, year, month, day);
+    }
+
+    /**
+     * @dev Converts a date to the related timestamp and emits an event with the result.
+     * TODO
+     */
+    function dateToTimestamp(uint256 year, uint256 month, uint256 day) external {
+        uint256 timestamp = Calendar.dateToTimestamp(year, month, day);
+        emit MockDateToTimestampCalled(year, month, day, timestamp);
     }
 }
