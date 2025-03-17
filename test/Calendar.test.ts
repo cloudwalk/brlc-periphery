@@ -36,46 +36,61 @@ describe("Library 'Dispatcher'", async () => {
 
     it("Executes as expected in different cases", async () => {
       await executeAndCheck(951868800, "2000-03-01 00:00:00");
-      await executeAndCheck(2082844799, "2036-01-01 23:59:59");
-      await executeAndCheck(2085350400, "2036-01-31 00:00:00");
-      await executeAndCheck(2085436800, "2036-02-01 00:00:00");
-      await executeAndCheck(2087856000, "2036-02-29 00:00:00");
-      await executeAndCheck(2087942400, "2036-03-01 00:00:00");
-      await executeAndCheck(2090534400, "2036-03-31 00:00:00");
-      await executeAndCheck(2090620800, "2036-04-01 00:00:00");
-      await executeAndCheck(2093126400, "2036-04-30 00:00:00");
-      await executeAndCheck(2093212800, "2036-05-01 00:00:00");
-      await executeAndCheck(2095804800, "2036-05-31 00:00:00");
-      await executeAndCheck(2095891200, "2036-06-01 00:00:00");
-      await executeAndCheck(2098396800, "2036-06-30 00:00:00");
-      await executeAndCheck(2098483200, "2036-07-01 00:00:00");
-      await executeAndCheck(2101075200, "2036-07-31 00:00:00");
-      await executeAndCheck(2101161600, "2036-08-01 00:00:00");
-      await executeAndCheck(2103753600, "2036-08-31 00:00:00");
-      await executeAndCheck(2103840000, "2036-09-01 00:00:00");
-      await executeAndCheck(2106345600, "2036-09-30 00:00:00");
-      await executeAndCheck(2106432000, "2036-10-01 00:00:00");
-      await executeAndCheck(2109024000, "2036-10-31 00:00:00");
-      await executeAndCheck(2109110400, "2036-11-01 00:00:00");
-      await executeAndCheck(2111702400, "2036-12-01 00:00:00");
-      await executeAndCheck(2114294400, "2036-12-31 00:00:00");
+      await executeAndCheck(3976300799, "2096-01-01 23:59:59");
+      await executeAndCheck(3978806400, "2096-01-31 00:00:00");
+      await executeAndCheck(3978892800, "2096-02-01 00:00:00");
+      await executeAndCheck(3981312000, "2096-02-29 00:00:00");
+      await executeAndCheck(3981398400, "2096-03-01 00:00:00");
+      await executeAndCheck(3983990400, "2096-03-31 00:00:00");
+      await executeAndCheck(3984076800, "2096-04-01 00:00:00");
+      await executeAndCheck(3986582400, "2096-04-30 00:00:00");
+      await executeAndCheck(3986668800, "2096-05-01 00:00:00");
+      await executeAndCheck(3989260800, "2096-05-31 00:00:00");
+      await executeAndCheck(3989347200, "2096-06-01 00:00:00");
+      await executeAndCheck(3991852800, "2096-06-30 00:00:00");
+      await executeAndCheck(3991939200, "2096-07-01 00:00:00");
+      await executeAndCheck(3994531200, "2096-07-31 00:00:00");
+      await executeAndCheck(3994617600, "2096-08-01 00:00:00");
+      await executeAndCheck(3997209600, "2096-08-31 00:00:00");
+      await executeAndCheck(3997296000, "2096-09-01 00:00:00");
+      await executeAndCheck(3999801600, "2096-09-30 00:00:00");
+      await executeAndCheck(3999888000, "2096-10-01 00:00:00");
+      await executeAndCheck(4002480000, "2096-10-31 00:00:00");
+      await executeAndCheck(4002566400, "2096-11-01 00:00:00");
+      await executeAndCheck(4005158400, "2096-12-01 00:00:00");
+      await executeAndCheck(4007750400, "2096-12-31 00:00:00");
       await executeAndCheck(4102444800, "2100-01-01 00:00:00");
       await executeAndCheck(4107456000, "2100-02-28 00:00:00");
+      await executeAndCheck(4133894400, "2100-12-31 00:00:00");
       await executeAndCheck(7258118400, "2200-01-01 00:00:00");
       await executeAndCheck(7263129600, "2200-02-28 00:00:00");
+      await executeAndCheck(7289568000, "2200-12-31 00:00:00");
+      await executeAndCheck(13443235200, "2396-01-01 00:00:00");
+      await executeAndCheck(13448332800, "2396-02-29 00:00:00");
+      await executeAndCheck(13474771200, "2396-12-31 00:00:00");
       await executeAndCheck(13542940800, "2399-02-28 00:00:00");
+      await executeAndCheck(13569379200, "2399-12-31 00:00:00");
     });
 
+    // This test is long and detailed, so it is skipped by default. It is intended for one-time checking if needed
     it.skip("Executes with timestamp of every month", async () => {
       function toUnixTimestamp(year: number, month: number, day: number): number {
         return Math.floor(Date.UTC(year, month - 1, day) / 1000);
       }
 
-      for (let y = 2001; y < 2100; ++y) {
+      let d = 1;
+      for (let y = 2001; y < 2400; ++y) {
         for (let m = 1; m < 13; ++m) {
-          const dateString = "" + y + "-" + m.toString().padStart(2, "0") + "-01 00:00:00";
-          const timestamp = toUnixTimestamp(y, m, 1);
+          const dateString =
+            "" + y + "-" + m.toString().padStart(2, "0") +
+            "-" + d.toString().padStart(2, "0") +
+            " 00:00:00";
+          const timestamp = toUnixTimestamp(y, m, d);
           await executeAndCheck(timestamp, dateString);
+          ++d;
+          if (d > 28) {
+            d = 1;
+          }
         }
       }
     });
