@@ -8,9 +8,16 @@ interface Date {
   day: number;
 }
 
+// Errors of the contracts under test
+const ERROR_NAME_CALENDAR_TIMESTAMP_INVALID = "Calendar_TimestampInvalid";
+
 function parseDate(datetimeString: string): Date {
   const [year, month, day] = datetimeString.split(/[- ]/).map(Number);
   return { year, month, day };
+}
+
+function toUnixTimestamp(year: number, month: number, day: number): number {
+  return Math.floor(Date.UTC(year, month - 1, day) / 1000);
 }
 
 describe("Library 'Dispatcher'", async () => {
@@ -74,10 +81,6 @@ describe("Library 'Dispatcher'", async () => {
 
     // This test is long and detailed, so it is skipped by default. It is intended for one-time checking if needed
     it.skip("Executes with timestamp of every month", async () => {
-      function toUnixTimestamp(year: number, month: number, day: number): number {
-        return Math.floor(Date.UTC(year, month - 1, day) / 1000);
-      }
-
       let d = 1;
       for (let y = 2001; y < 2400; ++y) {
         for (let m = 1; m < 13; ++m) {
@@ -93,6 +96,18 @@ describe("Library 'Dispatcher'", async () => {
           }
         }
       }
+    });
+
+    it("Executes if a timestamp is our of range", async () => {
+      let timestamp = toUnixTimestamp(2000, 2, 29) + 24 * 60 * 60 - 1;
+      await expect(calendar.timestampToDate(timestamp))
+        .to.revertedWithCustomError(calendar, ERROR_NAME_CALENDAR_TIMESTAMP_INVALID)
+        .withArgs(timestamp);
+
+      timestamp = toUnixTimestamp(2400, 1, 1);
+      await expect(calendar.timestampToDate(timestamp))
+        .to.revertedWithCustomError(calendar, ERROR_NAME_CALENDAR_TIMESTAMP_INVALID)
+        .withArgs(timestamp);
     });
   });
 });
