@@ -118,7 +118,7 @@ library Calendar {
      * @return timestamp The resulting timestamp.
      */
     function dateToTimestamp(uint256 year, uint256 month, uint256 day) internal pure returns (uint256 timestamp) {
-        if (year < BASE_YEAR || month == 0 || day == 0 || day > 31 || (year == BASE_YEAR && month < 3)) {
+        if (year < BASE_YEAR || month == 0 || month > 12 || day == 0 || day > 31 || (year == BASE_YEAR && month < 3)) {
             revert Calendar_DateInvalid(year, month, day);
         }
 

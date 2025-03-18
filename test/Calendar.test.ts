@@ -233,13 +233,19 @@ describe("Library 'Dispatcher'", async () => {
         .to.revertedWithCustomError(calendar, ERROR_NAME_CALENDAR_DATE_INVALID)
         .withArgs(date.year, date.month, date.day);
 
+      // The month is greater than 12
+      date = parseDate("2000-13-01");
+      await expect(calendar.dateToTimestamp(date.year, date.month, date.day))
+        .to.revertedWithCustomError(calendar, ERROR_NAME_CALENDAR_DATE_INVALID)
+        .withArgs(date.year, date.month, date.day);
+
       // The day is zero
       date = parseDate("2000-03-00");
       await expect(calendar.dateToTimestamp(date.year, date.month, date.day))
         .to.revertedWithCustomError(calendar, ERROR_NAME_CALENDAR_DATE_INVALID)
         .withArgs(date.year, date.month, date.day);
 
-      // The day is more than 31
+      // The day is greater than 31
       date = parseDate("2000-03-32");
       await expect(calendar.dateToTimestamp(date.year, date.month, date.day))
         .to.revertedWithCustomError(calendar, ERROR_NAME_CALENDAR_DATE_INVALID)
