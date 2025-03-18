@@ -88,6 +88,9 @@ library Calendar {
      * but increase the result contract size by about 0.74 kBytes.
      * Checked on Solidity v.0.8.24 with 1000 cycles of optimization.
      *
+     * Max gas usage: 2163 (Solidity v.0.8.24, 1000 optimization cycles).
+     * Code size: 0,536 kBytes (Solidity v.0.8.24, 1000 optimization cycles).
+     *
      * @param timestamp The timestamp to convert.
      * @return year The year of the date.
      * @return month The month of the date from 1 (January) to 12 (December).
@@ -129,6 +132,9 @@ library Calendar {
      * The function accepts date only after 2000-03-01.
      * The function executes only limited checks for the date validity, so be careful.
      * E.g. you can pass 31 February and get a valid timestamp.
+     *
+     * Max gas usage: 1734 (Solidity v.0.8.24, 1000 optimization cycles).
+     * Code size: 0,404 kBytes (Solidity v.0.8.24, 1000 optimization cycles).
      *
      * @param year The year of the date.
      * @param month The month of the date from 1 (January) to 12 (December).
