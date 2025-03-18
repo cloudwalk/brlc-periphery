@@ -56,7 +56,10 @@ library Calendar {
     error Calendar_TimestampInvalid(uint256 timestamp);
 
     /**
-     * @dev TODO
+     * @dev The provided date is invalid.
+     * @param year The year of the date.
+     * @param month The month of the date.
+     * @param day The day of the date.
      */
     error Calendar_DateInvalid(uint256 year, uint256 month, uint256 day);
 
@@ -70,8 +73,8 @@ library Calendar {
      *
      * @param timestamp The timestamp to convert.
      * @return year The year of the date.
-     * @return month The month of the date.
-     * @return day The day of the date.
+     * @return month The month of the date from 1 (January) to 12 (December).
+     * @return day The day of the date from 1 to 31.
      */
     function timestampToDate(uint256 timestamp) internal pure returns (uint256 year, uint256 month, uint256 day) {
         if (timestamp < BASE_TIMESTAMP || timestamp > LAST_TIMESTAMP) {
@@ -105,11 +108,13 @@ library Calendar {
     /**
      * @dev Converts a date to a timestamp.
      *
-     * TODO
+     * The function accepts date only after 2000-03-01.
+     * The function executes only limited checks for the date validity, so be careful.
+     * E.g. you can pass 31 February and get a valid timestamp.
      *
      * @param year The year of the date.
-     * @param month The month of the date.
-     * @param day The day of the date.
+     * @param month The month of the date from 1 (January) to 12 (December).
+     * @param day The day of the date from 1 to 31.
      * @return timestamp The resulting timestamp.
      */
     function dateToTimestamp(uint256 year, uint256 month, uint256 day) internal pure returns (uint256 timestamp) {
@@ -117,7 +122,8 @@ library Calendar {
             revert Calendar_DateInvalid(year, month, day);
         }
 
-        //
+        // Adjust the date as if the year starts on March 1st and extend month numbers to 14.
+        // It allows to use a simplified formula for calculating the day of year
         if (month < 3) {
             year -= 1;
             month += 12;

@@ -41,7 +41,9 @@ contract CalendarMock {
 
     /**
      * @dev Converts a date to the related timestamp and emits an event with the result.
-     * TODO
+     * @param year The year of the date.
+     * @param month The month of the date.
+     * @param day The day of the date.
      */
     function dateToTimestamp(uint256 year, uint256 month, uint256 day) external {
         uint256 timestamp = Calendar.dateToTimestamp(year, month, day);
