@@ -6,8 +6,6 @@ pragma solidity ^0.8.4;
  * @title Calendar library
  * @author CloudWalk Inc. (See https://cloudwalk.io)
  * @dev Defines calendar functions for converting timestamps to dates and back.
- *
- * Inspired by: https://git.musl-libc.org/cgit/musl/tree/src/time/__secs_to_tm.c
  */
 library Calendar {
     // ------------------ Constants ------------------------------- //
@@ -39,14 +37,6 @@ library Calendar {
     /// @dev Last acceptable timestamp: 2399-12-31 23:59:59 GMT
     uint256 private constant LAST_TIMESTAMP = 13569465599;
 
-    /// @dev Byte i corresponds to a month for a rebased day of year with index i.
-    bytes private constant MONTH_BY_REBASED_DAY_OF_YEAR =
-        hex"030303030303030303030303030303030303030303030303030303030303030404040404040404040404040404040404040404040404040404040404040505050505050505050505050505050505050505050505050505050505050506060606060606060606060606060606060606060606060606060606060607070707070707070707070707070707070707070707070707070707070707080808080808080808080808080808080808080808080808080808080808080909090909090909090909090909090909090909090909090909090909090A0A0A0A0A0A0A0A0A0A0A0A0A0A0A0A0A0A0A0A0A0A0A0A0A0A0A0A0A0A0A0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0C0C0C0C0C0C0C0C0C0C0C0C0C0C0C0C0C0C0C0C0C0C0C0C0C0C0C0C0C0C0C0D0D0D0D0D0D0D0D0D0D0D0D0D0D0D0D0D0D0D0D0D0D0D0D0D0D0D0D0D0D0D0E0E0E0E0E0E0E0E0E0E0E0E0E0E0E0E0E0E0E0E0E0E0E0E0E0E0E0E0E";
-
-    /// @dev Byte i corresponds to a day within a month for a rebased day of year with index i.
-    bytes private constant DAY_BY_REBASED_DAY_OF_YEAR =
-        hex"0102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F0102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E0102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F0102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E0102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F0102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F0102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E0102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F0102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E0102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F0102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F0102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D";
-
     // ------------------ Errors ---------------------------------- //
 
     /**
@@ -71,6 +61,33 @@ library Calendar {
      * The function accepts timestamp only between 2000-03-01 00:00:00 and 2399-12-31 23:59:59.
      * Otherwise it is reverted with the appropriate error.
      *
+     * Implementation notes:
+     *
+     * 1. The function is based on the idea of initially calculating the date as if the year starts on March 1st,
+     * and the month numbers are extended to 14. The month number and year are then adjusted back to
+     * the normal January start of the year.
+     * Inspired by: https://git.musl-libc.org/cgit/musl/tree/src/time/__secs_to_tm.c
+     *
+     * 2. The current implementation was chosen as it gives a smaller contract size.
+     * But the calculation of `month` and `day` variables in the function can be replaced by a direct mapping search
+     * to decrease gas consumption even more at the expense of the contract size.
+     *
+     * The alternative code might be like:
+     *
+     * ```solidity
+     *     bytes private constant MONTH_BY_REBASED_DAY_OF_YEAR = hex"030303....0E0E0E"; // 366 bytes long
+     *     bytes private constant DAY_BY_REBASED_DAY_OF_YEAR = hex"010203....1B1C1D"; // 366 bytes long
+     *
+     *     ....
+     *
+     *     month = uint256(uint8(MONTH_BY_REBASED_DAY_OF_YEAR[remainingDays]));
+     *     day = uint256(uint8(DAY_BY_REBASED_DAY_OF_YEAR[remainingDays]));
+     * ```
+     *
+     * The proposed replacement will reduce gas consumption by approximately 400,
+     * but increase the result contract size by about 0.74 kBytes.
+     * Checked on Solidity v.0.8.24 with 1000 cycles of optimization.
+     *
      * @param timestamp The timestamp to convert.
      * @return year The year of the date.
      * @return month The month of the date from 1 (January) to 12 (December).
@@ -93,16 +110,17 @@ library Calendar {
         if (year == 4) {
             --year;
         }
-
         remainingDays -= year * DAYS_PER_YEAR;
-        year += BASE_YEAR + 4 * yearTetradsInCentury + 100 * centuries;
 
-        month = uint256(uint8(MONTH_BY_REBASED_DAY_OF_YEAR[remainingDays]));
+        year += BASE_YEAR + 4 * yearTetradsInCentury + 100 * centuries;
+        month = (remainingDays * 5 + 2) / 153  + 3;
+        day = remainingDays - (153 * (month - 3) + 2) / 5 + 1;
+
+        // Adjust the month number and year back to the normal January start of the year.
         if (month > MONTHS_PER_YEAR) {
             month -= MONTHS_PER_YEAR;
             ++year;
         }
-        day = uint256(uint8(DAY_BY_REBASED_DAY_OF_YEAR[remainingDays]));
     }
 
     /**
