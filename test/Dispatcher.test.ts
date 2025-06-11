@@ -47,7 +47,6 @@ async function setUpFixture<T>(func: () => Promise<T>): Promise<T> {
 describe("Contract 'Dispatcher'", async () => {
   // Errors of the lib contracts
   const REVERT_ERROR_IF_CONTRACT_INITIALIZATION_IS_INVALID = "InvalidInitialization";
-  const REVERT_ERROR_IF_CONTRACT_IS_NOT_INITIALIZING = "NotInitializing";
   const REVERT_ERROR_IF_CONTRACT_IS_PAUSED = "EnforcedPause";
   const REVERT_ERROR_IF_UNAUTHORIZED_ACCOUNT = "AccessControlUnauthorizedAccount";
 
@@ -92,7 +91,7 @@ describe("Contract 'Dispatcher'", async () => {
   });
 
   async function deployContracts(): Promise<Fixture> {
-    let dispatcherContract: Contract = await upgrades.deployProxy(dispatcherContractFactory);
+    let dispatcherContract = await upgrades.deployProxy(dispatcherContractFactory) as Contract;
     await dispatcherContract.waitForDeployment();
     dispatcherContract = connect(dispatcherContract, deployer); // Explicitly specifying the initial account
 
@@ -102,15 +101,13 @@ describe("Contract 'Dispatcher'", async () => {
     const capybaraLiquidityPoolMockFactory =
       (await ethers.getContractFactory("CapybaraLiquidityPoolMock")).connect(deployer);
 
-    let tokenMock: Contract = (await tokenMockFactory.deploy("ERC20 Test", "TEST")) as Contract;
+    let tokenMock = (await tokenMockFactory.deploy("ERC20 Test", "TEST")) as Contract;
     await tokenMock.waitForDeployment();
 
-    let compoundAgentMock: Contract = (await compoundAgentMockFactory.deploy(getAddress(tokenMock))) as Contract;
+    let compoundAgentMock = (await compoundAgentMockFactory.deploy(getAddress(tokenMock))) as Contract;
     await compoundAgentMock.waitForDeployment();
 
-    let capybaraLiquidityPoolMock: Contract = (await capybaraLiquidityPoolMockFactory.deploy(
-      getAddress(tokenMock)
-    )) as Contract;
+    let capybaraLiquidityPoolMock = (await capybaraLiquidityPoolMockFactory.deploy(getAddress(tokenMock))) as Contract;
     await capybaraLiquidityPoolMock.waitForDeployment();
 
     // Explicitly specifying the initial account
