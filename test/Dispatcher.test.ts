@@ -78,6 +78,7 @@ describe("Contract 'Dispatcher'", async () => {
 
   const DEFAULT_ADMIN_ROLE: string = ethers.ZeroHash;
   const OWNER_ROLE: string = ethers.id("OWNER_ROLE");
+  const GRANTOR_ROLE: string = ethers.id("GRANTOR_ROLE");
   const PAUSER_ROLE: string = ethers.id("PAUSER_ROLE");
   const RESCUER_ROLE: string = ethers.id("RESCUER_ROLE");
   const LIQUIDITY_MOVER_ROLE: string = ethers.id("LIQUIDITY_MOVER_ROLE");
@@ -126,6 +127,7 @@ describe("Contract 'Dispatcher'", async () => {
   }
 
   async function pauseContract(contract: Contract) {
+    await proveTx(contract.grantRole(GRANTOR_ROLE, deployer.address));
     await proveTx(contract.grantRole(PAUSER_ROLE, deployer.address));
     await proveTx(contract.pause());
   }
@@ -136,18 +138,21 @@ describe("Contract 'Dispatcher'", async () => {
 
       // Role hashes
       expect(await dispatcherContract.OWNER_ROLE()).to.equal(OWNER_ROLE);
+      expect(await dispatcherContract.GRANTOR_ROLE()).to.equal(GRANTOR_ROLE);
       expect(await dispatcherContract.PAUSER_ROLE()).to.equal(PAUSER_ROLE);
       expect(await dispatcherContract.RESCUER_ROLE()).to.equal(RESCUER_ROLE);
       expect(await dispatcherContract.LIQUIDITY_MOVER_ROLE()).to.equal(LIQUIDITY_MOVER_ROLE);
 
       // The role admins
       expect(await dispatcherContract.getRoleAdmin(OWNER_ROLE)).to.equal(OWNER_ROLE);
-      expect(await dispatcherContract.getRoleAdmin(PAUSER_ROLE)).to.equal(OWNER_ROLE);
-      expect(await dispatcherContract.getRoleAdmin(RESCUER_ROLE)).to.equal(OWNER_ROLE);
+      expect(await dispatcherContract.getRoleAdmin(GRANTOR_ROLE)).to.equal(OWNER_ROLE);
+      expect(await dispatcherContract.getRoleAdmin(PAUSER_ROLE)).to.equal(GRANTOR_ROLE);
+      expect(await dispatcherContract.getRoleAdmin(RESCUER_ROLE)).to.equal(GRANTOR_ROLE);
       expect(await dispatcherContract.getRoleAdmin(LIQUIDITY_MOVER_ROLE)).to.equal(DEFAULT_ADMIN_ROLE);
 
       // The deployer should have the owner role, but not the other roles
       expect(await dispatcherContract.hasRole(OWNER_ROLE, deployer.address)).to.equal(true);
+      expect(await dispatcherContract.hasRole(GRANTOR_ROLE, deployer.address)).to.equal(false);
       expect(await dispatcherContract.hasRole(PAUSER_ROLE, deployer.address)).to.equal(false);
       expect(await dispatcherContract.hasRole(RESCUER_ROLE, deployer.address)).to.equal(false);
       expect(await dispatcherContract.hasRole(LIQUIDITY_MOVER_ROLE, deployer.address)).to.equal(false);
@@ -227,7 +232,7 @@ describe("Contract 'Dispatcher'", async () => {
     async function executeAndCheck(dispatcherContract: Contract, accounts: string[]) {
       await proveTx(dispatcherContract.initLiquidityMoverRole(accounts));
 
-      expect(await dispatcherContract.getRoleAdmin(LIQUIDITY_MOVER_ROLE)).to.equal(OWNER_ROLE);
+      expect(await dispatcherContract.getRoleAdmin(LIQUIDITY_MOVER_ROLE)).to.equal(GRANTOR_ROLE);
       for (const account of accounts) {
         expect(await dispatcherContract.hasRole(LIQUIDITY_MOVER_ROLE, account))
           .to.equal(true, `The role is NOT set for account with address ${account}`);

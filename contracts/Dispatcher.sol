@@ -40,9 +40,6 @@ contract Dispatcher is
 {
     // ------------------ Constants ------------------------------- //
 
-    /// @dev The role of this contract owner.
-    bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");
-
     /// @dev The role that allows to move liquidity from Compound to Capybara.
     bytes32 public constant LIQUIDITY_MOVER_ROLE = keccak256("LIQUIDITY_MOVER_ROLE");
 
@@ -76,8 +73,8 @@ contract Dispatcher is
         __AccessControl_init_unchained();
         __AccessControlExt_init_unchained();
         __Pausable_init_unchained();
-        __PausableExt_init_unchained(OWNER_ROLE);
-        __Rescuable_init_unchained(OWNER_ROLE);
+        __PausableExt_init_unchained();
+        __Rescuable_init_unchained();
         __UUPSUpgradeable_init_unchained();
 
         __Dispatcher_init_unchained();
@@ -90,7 +87,6 @@ contract Dispatcher is
      *
      */
     function __Dispatcher_init_unchained() internal onlyInitializing {
-        _setRoleAdmin(OWNER_ROLE, OWNER_ROLE);
         _grantRole(OWNER_ROLE, _msgSender());
     }
 
@@ -107,7 +103,7 @@ contract Dispatcher is
      * @param accounts The addresses of the accounts to initialize the liquidity mover role for.
      */
     function initLiquidityMoverRole(address[] calldata accounts) external onlyRole(OWNER_ROLE) {
-        _setRoleAdmin(LIQUIDITY_MOVER_ROLE, OWNER_ROLE);
+        _setRoleAdmin(LIQUIDITY_MOVER_ROLE, GRANTOR_ROLE);
         uint256 len = accounts.length;
         for (uint256 i = 0; i < len; ++i) {
             address account = accounts[i];
