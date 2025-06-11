@@ -54,39 +54,16 @@ contract Dispatcher is
     // ------------------ Initializers ---------------------------- //
 
     /**
-     * @dev Initializer of the upgradable contract.
+     * @dev The initialize function of the upgradeable contract.
      *
-     * See details https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable.
+     * See details: https://docs.openzeppelin.com/upgrades-plugins/writing-upgradeable
      */
     function initialize() external initializer {
-        __Dispatcher_init();
-    }
-
-    /**
-     * @dev Internal initializer of the upgradable contract.
-     *
-     * See details https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable.
-     */
-    function __Dispatcher_init() internal onlyInitializing {
-        __Context_init_unchained();
-        __ERC165_init_unchained();
-        __AccessControl_init_unchained();
         __AccessControlExt_init_unchained();
-        __Pausable_init_unchained();
         __PausableExt_init_unchained();
         __Rescuable_init_unchained();
-        __UUPSUpgradeable_init_unchained();
+        __UUPSExt_init_unchained(); // This is needed only to avoid errors during coverage assessment
 
-        __Dispatcher_init_unchained();
-    }
-
-    /**
-     * @dev Unchained internal initializer of the upgradable contract.
-     *
-     * See details https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable.
-     *
-     */
-    function __Dispatcher_init_unchained() internal onlyInitializing {
         _grantRole(OWNER_ROLE, _msgSender());
     }
 

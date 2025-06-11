@@ -87,7 +87,7 @@ describe("Contract 'Dispatcher'", async () => {
     [deployer, liquidityMover, stranger] = await ethers.getSigners();
 
     // Contract factories with the explicitly specified deployer account
-    dispatcherContractFactory = await ethers.getContractFactory("DispatcherTestable");
+    dispatcherContractFactory = await ethers.getContractFactory("Dispatcher");
     dispatcherContractFactory = dispatcherContractFactory.connect(deployer);
   });
 
@@ -166,20 +166,6 @@ describe("Contract 'Dispatcher'", async () => {
       await expect(
         dispatcherContract.initialize()
       ).to.be.revertedWithCustomError(dispatcherContract, REVERT_ERROR_IF_CONTRACT_INITIALIZATION_IS_INVALID);
-    });
-
-    it("Is reverted if the internal initializer is called outside the init process", async () => {
-      const { dispatcherContract } = await setUpFixture(deployContracts);
-      await expect(
-        dispatcherContract.call_parent_initialize()
-      ).to.be.revertedWithCustomError(dispatcherContract, REVERT_ERROR_IF_CONTRACT_IS_NOT_INITIALIZING);
-    });
-
-    it("Is reverted if the unchained internal initializer is called outside the init process", async () => {
-      const { dispatcherContract } = await setUpFixture(deployContracts);
-      await expect(
-        dispatcherContract.call_parent_initialize_unchained()
-      ).to.be.revertedWithCustomError(dispatcherContract, REVERT_ERROR_IF_CONTRACT_IS_NOT_INITIALIZING);
     });
   });
 
