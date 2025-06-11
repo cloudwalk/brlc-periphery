@@ -45,23 +45,23 @@ async function setUpFixture<T>(func: () => Promise<T>): Promise<T> {
 }
 
 describe("Contract 'Dispatcher'", async () => {
-  // Errors of the lib contracts
-  const REVERT_ERROR_IF_CONTRACT_INITIALIZATION_IS_INVALID = "InvalidInitialization";
-  const REVERT_ERROR_IF_CONTRACT_IS_PAUSED = "EnforcedPause";
-  const REVERT_ERROR_IF_UNAUTHORIZED_ACCOUNT = "AccessControlUnauthorizedAccount";
-
-  // Errors of the contracts under test
-  const REVERT_ERROR_IF_IMPLEMENTATION_ADDRESS_INVALID = "Dispatcher_ImplementationAddressInvalid";
-  const REVERT_ERROR_IF_ACCOUNT_ADDRESS_ZERO = "Dispatcher_AccountAddressZero";
+  // Events of the ERC20 contract
+  const EVENT_NAME_TRANSFER = "Transfer";
 
   // Events of the mock contracts
   const EVENT_NAME_MOCK_CONFIGURE_ADMIN_CALLED = "MockConfigureAdminCalled";
   const EVENT_NAME_MOCK_DEPOSIT_CALLED = "MockDepositCalled";
-  const EVENT_NAME_MOCK_TRANSFER_OWNERSHIP_CALLED = "MockTransferOwnershipCalled";
   const EVENT_NAME_MOCK_REDEEM_UNDERLYING_CALLED = "MockRedeemUnderlyingCalled";
+  const EVENT_NAME_MOCK_TRANSFER_OWNERSHIP_CALLED = "MockTransferOwnershipCalled";
 
-  // Events of the ERC20 contract
-  const EVENT_NAME_TRANSFER = "Transfer";
+  // Errors of the library contracts
+  const ERROR_NAME_ACCESS_CONTROL_UNAUTHORIZED_ACCOUNT = "AccessControlUnauthorizedAccount";
+  const ERROR_NAME_ENFORCED_PAUSE = "EnforcedPause";
+  const ERROR_NAME_INVALID_INITIALIZATION = "InvalidInitialization";
+
+  // Errors of the contracts under test
+  const ERROR_NAME_ACCOUNT_ADDRESS_ZERO = "Dispatcher_AccountAddressZero";
+  const ERROR_NAME_IMPLEMENTATION_ADDRESS_INVALID = "Dispatcher_ImplementationAddressInvalid";
 
   const EXPECTED_VERSION: Version = {
     major: 1,
@@ -162,7 +162,7 @@ describe("Contract 'Dispatcher'", async () => {
       const { dispatcherContract } = await setUpFixture(deployContracts);
       await expect(
         dispatcherContract.initialize()
-      ).to.be.revertedWithCustomError(dispatcherContract, REVERT_ERROR_IF_CONTRACT_INITIALIZATION_IS_INVALID);
+      ).to.be.revertedWithCustomError(dispatcherContract, ERROR_NAME_INVALID_INITIALIZATION);
     });
   });
 
@@ -176,7 +176,7 @@ describe("Contract 'Dispatcher'", async () => {
       const { dispatcherContract } = await setUpFixture(deployContracts);
 
       await expect(connect(dispatcherContract, stranger).upgradeToAndCall(getAddress(dispatcherContract), "0x"))
-        .to.be.revertedWithCustomError(dispatcherContract, REVERT_ERROR_IF_UNAUTHORIZED_ACCOUNT)
+        .to.be.revertedWithCustomError(dispatcherContract, ERROR_NAME_ACCESS_CONTROL_UNAUTHORIZED_ACCOUNT)
         .withArgs(stranger.address, OWNER_ROLE);
     });
   });
@@ -191,7 +191,7 @@ describe("Contract 'Dispatcher'", async () => {
       const { dispatcherContract } = await setUpFixture(deployContracts);
 
       await expect(connect(dispatcherContract, stranger).upgradeTo(getAddress(dispatcherContract)))
-        .to.be.revertedWithCustomError(dispatcherContract, REVERT_ERROR_IF_UNAUTHORIZED_ACCOUNT)
+        .to.be.revertedWithCustomError(dispatcherContract, ERROR_NAME_ACCESS_CONTROL_UNAUTHORIZED_ACCOUNT)
         .withArgs(stranger.address, OWNER_ROLE);
     });
 
@@ -199,7 +199,7 @@ describe("Contract 'Dispatcher'", async () => {
       const { dispatcherContract, compoundAgentMock } = await setUpFixture(deployContracts);
 
       await expect(dispatcherContract.upgradeTo(getAddress(compoundAgentMock)))
-        .to.be.revertedWithCustomError(dispatcherContract, REVERT_ERROR_IF_IMPLEMENTATION_ADDRESS_INVALID);
+        .to.be.revertedWithCustomError(dispatcherContract, ERROR_NAME_IMPLEMENTATION_ADDRESS_INVALID);
     });
   });
 
@@ -246,7 +246,7 @@ describe("Contract 'Dispatcher'", async () => {
         connect(dispatcherContract, stranger).initLiquidityMoverRole([])
       ).to.be.revertedWithCustomError(
         dispatcherContract,
-        REVERT_ERROR_IF_UNAUTHORIZED_ACCOUNT
+        ERROR_NAME_ACCESS_CONTROL_UNAUTHORIZED_ACCOUNT
       ).withArgs(stranger.address, OWNER_ROLE);
     });
 
@@ -256,7 +256,7 @@ describe("Contract 'Dispatcher'", async () => {
         dispatcherContract.initLiquidityMoverRole([stranger.address, ADDRESS_ZERO])
       ).to.be.revertedWithCustomError(
         dispatcherContract,
-        REVERT_ERROR_IF_ACCOUNT_ADDRESS_ZERO
+        ERROR_NAME_ACCOUNT_ADDRESS_ZERO
       );
     });
   });
@@ -300,7 +300,7 @@ describe("Contract 'Dispatcher'", async () => {
         connect(dispatcherContract, stranger).removeLiquidityMoverRole([])
       ).to.be.revertedWithCustomError(
         dispatcherContract,
-        REVERT_ERROR_IF_UNAUTHORIZED_ACCOUNT
+        ERROR_NAME_ACCESS_CONTROL_UNAUTHORIZED_ACCOUNT
       ).withArgs(stranger.address, OWNER_ROLE);
     });
 
@@ -310,7 +310,7 @@ describe("Contract 'Dispatcher'", async () => {
         dispatcherContract.removeLiquidityMoverRole([stranger.address, ADDRESS_ZERO])
       ).to.be.revertedWithCustomError(
         dispatcherContract,
-        REVERT_ERROR_IF_ACCOUNT_ADDRESS_ZERO
+        ERROR_NAME_ACCOUNT_ADDRESS_ZERO
       );
     });
   });
@@ -339,7 +339,7 @@ describe("Contract 'Dispatcher'", async () => {
       await pauseContract(dispatcherContract);
       await expect(
         dispatcherContract.transferOwnershipForCompoundAgent(getAddress(compoundAgentMock), stranger.address)
-      ).to.be.revertedWithCustomError(dispatcherContract, REVERT_ERROR_IF_CONTRACT_IS_PAUSED);
+      ).to.be.revertedWithCustomError(dispatcherContract, ERROR_NAME_ENFORCED_PAUSE);
     });
 
     it("Is reverted if the caller does not have the owner role", async () => {
@@ -351,7 +351,7 @@ describe("Contract 'Dispatcher'", async () => {
         )
       ).to.be.revertedWithCustomError(
         dispatcherContract,
-        REVERT_ERROR_IF_UNAUTHORIZED_ACCOUNT
+        ERROR_NAME_ACCESS_CONTROL_UNAUTHORIZED_ACCOUNT
       ).withArgs(stranger.address, OWNER_ROLE);
     });
   });
@@ -408,7 +408,7 @@ describe("Contract 'Dispatcher'", async () => {
       const newState = true;
       await expect(
         dispatcherContract.configureAdminBatchForCompoundAgent(getAddress(compoundAgentMock), newState, [])
-      ).to.be.revertedWithCustomError(dispatcherContract, REVERT_ERROR_IF_CONTRACT_IS_PAUSED);
+      ).to.be.revertedWithCustomError(dispatcherContract, ERROR_NAME_ENFORCED_PAUSE);
     });
 
     it("Is reverted if the caller does not have the owner role", async () => {
@@ -422,7 +422,7 @@ describe("Contract 'Dispatcher'", async () => {
         )
       ).to.be.revertedWithCustomError(
         dispatcherContract,
-        REVERT_ERROR_IF_UNAUTHORIZED_ACCOUNT
+        ERROR_NAME_ACCESS_CONTROL_UNAUTHORIZED_ACCOUNT
       ).withArgs(stranger.address, OWNER_ROLE);
     });
   });
@@ -474,7 +474,7 @@ describe("Contract 'Dispatcher'", async () => {
           getAddress(compoundAgentMock),
           getAddress(capybaraLiquidityPoolMock)
         )
-      ).to.be.revertedWithCustomError(dispatcherContract, REVERT_ERROR_IF_CONTRACT_IS_PAUSED);
+      ).to.be.revertedWithCustomError(dispatcherContract, ERROR_NAME_ENFORCED_PAUSE);
     });
 
     it("Is reverted if the caller does not have the liquidity mover role", async () => {
@@ -489,7 +489,7 @@ describe("Contract 'Dispatcher'", async () => {
         )
       ).to.be.revertedWithCustomError(
         dispatcherContract,
-        REVERT_ERROR_IF_UNAUTHORIZED_ACCOUNT
+        ERROR_NAME_ACCESS_CONTROL_UNAUTHORIZED_ACCOUNT
       ).withArgs(deployer.address, LIQUIDITY_MOVER_ROLE);
 
       await expect(
@@ -500,7 +500,7 @@ describe("Contract 'Dispatcher'", async () => {
         )
       ).to.be.revertedWithCustomError(
         dispatcherContract,
-        REVERT_ERROR_IF_UNAUTHORIZED_ACCOUNT
+        ERROR_NAME_ACCESS_CONTROL_UNAUTHORIZED_ACCOUNT
       ).withArgs(stranger.address, LIQUIDITY_MOVER_ROLE);
     });
   });
