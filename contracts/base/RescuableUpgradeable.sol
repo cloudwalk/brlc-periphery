@@ -45,7 +45,7 @@ abstract contract RescuableUpgradeable is AccessControlExtUpgradeable {
      * Requirements:
      *
      * - The caller must have the {RESCUER_ROLE} role.
-     * - The provided account address must not be zero. It is usually checked inside the token smart-contract.
+     * - The provided account address must not be zero. It is usually checked inside the token smart contract.
      *
      * @param token The address of the token smart contract to rescue its coins from this smart contract's account.
      * @param account The account to transfer the rescued tokens to.

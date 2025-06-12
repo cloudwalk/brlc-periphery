@@ -36,7 +36,7 @@ interface ILiquidityPool {
 /**
  * @title Dispatcher contract
  * @author CloudWalk Inc. (See https://www.cloudwalk.io)
- * @dev The contract that responsible for performing various actions on other contracts.
+ * @dev The contract that is responsible for performing various actions on other contracts.
  */
 contract Dispatcher is
     DispatcherStorage,
@@ -183,7 +183,7 @@ contract Dispatcher is
      *
      * - The contract must not be paused.
      * - The caller must have the {LIQUIDITY_MOVER_ROLE} role.
-     *  
+     *
      * @param amount The amount of liquidity to move.
      * @param compoundAgent The address of the CompoundAgent contract to move liquidity from.
      * @param capybaraLiquidityPool The address of the liquidity pool to move liquidity to.

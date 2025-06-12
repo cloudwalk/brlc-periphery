@@ -6,7 +6,7 @@ import { ERC20TokenMock } from "./tokens/ERC20TokenMock.sol";
 
 /**
  * @title CompoundAgentMock contract
- * @author CloudWalk Inc. ((See https://www.cloudwalk.io))
+ * @author CloudWalk Inc. (See https://www.cloudwalk.io)
  * @dev A simplified version of the CompoundAgent contract to use in tests for other contracts.
  */
 contract CompoundAgentMock {
@@ -51,9 +51,9 @@ contract CompoundAgentMock {
     // ------------------ Transactional functions ----------------- //
 
     /**
-     * @dev Imitates the same-name function of the CompoundAgent smart-contract.
+     * @dev Imitates the same-name function of the CompoundAgent smart contract.
      *
-     * Just emits an event about the call and manage allowance for token transfers from the contract.
+     * Just emits an event about the call and manages allowance for token transfers from the contract.
      *
      * @param newOwner The address of the new owner.
      */
@@ -70,7 +70,7 @@ contract CompoundAgentMock {
     }
 
     /**
-     * @dev Imitates the same-name function of the CompoundAgent smart-contract. Just emits an event about the call.
+     * @dev Imitates the same-name function of the CompoundAgent smart contract. Just emits an event about the call.
      * @param account The address of the account to configure.
      * @param newStatus The new status of the account.
      */
@@ -87,7 +87,7 @@ contract CompoundAgentMock {
     }
 
     /**
-     * @dev Imitates the same-name function of the CompoundAgent smart-contract.
+     * @dev Imitates the same-name function of the CompoundAgent smart contract.
      * @param redeemAmount The amount of the underlying token to redeem.
      */
     function redeemUnderlying(uint256 redeemAmount) external {
