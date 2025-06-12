@@ -164,6 +164,14 @@ describe("Contract 'Dispatcher'", async () => {
         dispatcherContract.initialize()
       ).to.be.revertedWithCustomError(dispatcherContract, ERROR_NAME_INVALID_INITIALIZATION);
     });
+
+    it("Is reverted for the contract implementation if it is called even for the first time", async () => {
+      const dispatcherImplementation = await dispatcherContractFactory.deploy() as Contract;
+      await dispatcherImplementation.waitForDeployment();
+
+      await expect(dispatcherImplementation.initialize())
+        .to.be.revertedWithCustomError(dispatcherImplementation, ERROR_NAME_INVALID_INITIALIZATION);
+    });
   });
 
   describe("Function 'upgradeToAndCall()'", async () => {
