@@ -67,7 +67,7 @@ contract Dispatcher is
         _grantRole(OWNER_ROLE, _msgSender());
     }
 
-    // ------------------ Functions ------------------------------- //
+    // ------------------ Transactional functions ----------------- //
 
     /**
      * @dev Initializes the liquidity mover role for a batch of accounts and

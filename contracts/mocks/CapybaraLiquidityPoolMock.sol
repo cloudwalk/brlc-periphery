@@ -31,7 +31,7 @@ contract CapybaraLiquidityPoolMock {
         underlyingToken = underlyingToken_;
     }
 
-    // ------------------ Functions ------------------------------ //
+    // ------------------ Transactional functions ----------------- //
 
     /**
      * @dev Imitates the same-name function of the liquidity pool of the `CapybaraFinance` protocol.

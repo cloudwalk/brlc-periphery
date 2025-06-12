@@ -48,7 +48,7 @@ contract CompoundAgentMock {
         underlyingToken = underlyingToken_;
     }
 
-    // ------------------ Functions -------------------------------- //
+    // ------------------ Transactional functions ----------------- //
 
     /**
      * @dev Imitates the same-name function of the CompoundAgent smart-contract.
