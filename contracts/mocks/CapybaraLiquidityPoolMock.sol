@@ -6,7 +6,7 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
  * @title CapybaraLiquidityPoolMock contract
- * @author CloudWalk Inc. (See https://cloudwalk.io)
+ * @author CloudWalk Inc. ((See https://www.cloudwalk.io))
  * @dev A simplified version of the liquidity pool smart-contract of the `CapybaraFinance` protocol
  *      to use in tests for other contracts.
  */

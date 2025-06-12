@@ -6,7 +6,7 @@ import { ERC20TokenMock } from "./tokens/ERC20TokenMock.sol";
 
 /**
  * @title CompoundAgentMock contract
- * @author CloudWalk Inc. (See https://cloudwalk.io)
+ * @author CloudWalk Inc. ((See https://www.cloudwalk.io))
  * @dev A simplified version of the CompoundAgent contract to use in tests for other contracts.
  */
 contract CompoundAgentMock {

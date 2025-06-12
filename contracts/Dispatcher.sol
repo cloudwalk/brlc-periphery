@@ -12,14 +12,22 @@ import { UUPSExtUpgradeable } from "./base/UUPSExtUpgradeable.sol";
 
 import { DispatcherStorage } from "./DispatcherStorage.sol";
 
-/// @dev Interface for the CompoundAgent contract with the necessary functions.
+/**
+ * @title ICompoundAgent interface
+ * @author CloudWalk Inc. (See https://www.cloudwalk.io)
+ * @dev Interface for the CompoundAgent contract with the necessary functions.
+ */
 interface ICompoundAgent {
     function transferOwnership(address newOwner) external;
     function configureAdmin(address account, bool newStatus) external;
     function redeemUnderlying(uint256 redeemAmount) external;
 }
 
-/// @dev Interface for the liquidity pool contract from the `CapybaraFinance` protocol with the necessary functions.
+/**
+ * @title ILiquidityPool interface
+ * @author CloudWalk Inc. (See https://www.cloudwalk.io)
+ * @dev Interface for the liquidity pool contract from the `CapybaraFinance` protocol with the necessary functions.
+ */
 interface ILiquidityPool {
     function deposit(uint256 amount) external;
     function token() external view returns (address);
