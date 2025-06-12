@@ -40,7 +40,7 @@ contract Dispatcher is
 {
     // ------------------ Constants ------------------------------- //
 
-    /// @dev The role that allows to move liquidity from Compound to Capybara.
+    /// @dev The role of a liquidity mover that is allowed to move liquidity from Compound to Capybara.
     bytes32 public constant LIQUIDITY_MOVER_ROLE = keccak256("LIQUIDITY_MOVER_ROLE");
 
     // ------------------ Errors ---------------------------------- //
