@@ -17,9 +17,7 @@ contract CapybaraLiquidityPoolMock {
     // ------------------ Events ---------------------------------- //
 
     /// @dev Emitted when the `deposit()` function is called with the parameters of the function.
-    event MockDepositCalled(
-        uint256 amount
-    );
+    event MockDepositCalled(uint256 amount);
 
     // ------------------ Constructor ----------------------------- //
 

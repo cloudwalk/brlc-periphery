@@ -22,21 +22,17 @@ contract CompoundAgentMock {
     // ------------------ Events ---------------------------------- //
 
     /// @dev Emitted when the `transferOwnership()` function is called with the parameters of the function.
-    event MockTransferOwnershipCalled(
-        address newOwner
-    );
+    event MockTransferOwnershipCalled(address newOwner);
 
     /// @dev Emitted when the `configureAdmin()` function is called with the parameters of the function and the counter
     event MockConfigureAdminCalled(
-        address account,
+        address account, // Tools: this comment prevents Prettier from formatting into a single line
         bool newStatus,
         uint256 configureAdminCallCounter
     );
 
     /// @dev Emitted when the `redeemUnderlying()` function is called with the parameters of the function
-    event MockRedeemUnderlyingCalled(
-        uint256 redeemAmount
-    );
+    event MockRedeemUnderlyingCalled(uint256 redeemAmount);
 
     // ------------------ Constructor ----------------------------- //
 
@@ -74,13 +70,10 @@ contract CompoundAgentMock {
      * @param account The address of the account to configure.
      * @param newStatus The new status of the account.
      */
-    function configureAdmin(
-        address account,
-        bool newStatus
-    ) external {
+    function configureAdmin(address account, bool newStatus) external {
         ++configureAdminCallCounter;
         emit MockConfigureAdminCalled(
-            account,
+            account, // Tools: this comment prevents Prettier from formatting into a single line
             newStatus,
             configureAdminCallCounter
         );
