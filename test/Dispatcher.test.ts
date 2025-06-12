@@ -1,9 +1,9 @@
-import { ethers, network, upgrades } from "hardhat";
+import { ethers, upgrades } from "hardhat";
 import { expect } from "chai";
 import { Contract, ContractFactory } from "ethers";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { checkContractUupsUpgrading, connect, getAddress, proveTx } from "../test-utils/eth";
+import { setUpFixture } from "../test-utils/common";
 
 const ADDRESS_ZERO = ethers.ZeroAddress;
 
@@ -36,14 +36,6 @@ function checkEquality<T extends Record<string, unknown>>(actualObject: T, expec
   });
 }
 
-async function setUpFixture<T>(func: () => Promise<T>): Promise<T> {
-  if (network.name === "hardhat") {
-    return loadFixture(func);
-  } else {
-    return func();
-  }
-}
-
 describe("Contract 'Dispatcher'", async () => {
   // Events of the ERC20 contract
   const EVENT_NAME_TRANSFER = "Transfer";
@@ -63,6 +55,13 @@ describe("Contract 'Dispatcher'", async () => {
   const ERROR_NAME_ACCOUNT_ADDRESS_ZERO = "Dispatcher_AccountAddressZero";
   const ERROR_NAME_IMPLEMENTATION_ADDRESS_INVALID = "Dispatcher_ImplementationAddressInvalid";
 
+  const DEFAULT_ADMIN_ROLE: string = ethers.ZeroHash;
+  const OWNER_ROLE: string = ethers.id("OWNER_ROLE");
+  const GRANTOR_ROLE: string = ethers.id("GRANTOR_ROLE");
+  const PAUSER_ROLE: string = ethers.id("PAUSER_ROLE");
+  const RESCUER_ROLE: string = ethers.id("RESCUER_ROLE");
+  const LIQUIDITY_MOVER_ROLE: string = ethers.id("LIQUIDITY_MOVER_ROLE");
+
   const EXPECTED_VERSION: Version = {
     major: 1,
     minor: 2,
@@ -74,13 +73,6 @@ describe("Contract 'Dispatcher'", async () => {
   let deployer: HardhatEthersSigner;
   let liquidityMover: HardhatEthersSigner;
   let stranger: HardhatEthersSigner;
-
-  const DEFAULT_ADMIN_ROLE: string = ethers.ZeroHash;
-  const OWNER_ROLE: string = ethers.id("OWNER_ROLE");
-  const GRANTOR_ROLE: string = ethers.id("GRANTOR_ROLE");
-  const PAUSER_ROLE: string = ethers.id("PAUSER_ROLE");
-  const RESCUER_ROLE: string = ethers.id("RESCUER_ROLE");
-  const LIQUIDITY_MOVER_ROLE: string = ethers.id("LIQUIDITY_MOVER_ROLE");
 
   before(async () => {
     [deployer, liquidityMover, stranger] = await ethers.getSigners();
