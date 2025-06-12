@@ -152,9 +152,8 @@ describe("Contract 'Dispatcher'", async () => {
 
     it("Is reverted if it is called a second time", async () => {
       const { dispatcherContract } = await setUpFixture(deployContracts);
-      await expect(
-        dispatcherContract.initialize()
-      ).to.be.revertedWithCustomError(dispatcherContract, ERROR_NAME_INVALID_INITIALIZATION);
+      await expect(dispatcherContract.initialize())
+        .to.be.revertedWithCustomError(dispatcherContract, ERROR_NAME_INVALID_INITIALIZATION);
     });
 
     it("Is reverted for the contract implementation if it is called even for the first time", async () => {
@@ -242,22 +241,15 @@ describe("Contract 'Dispatcher'", async () => {
 
     it("Is reverted if the caller does not have the owner role", async () => {
       const { dispatcherContract } = await setUpFixture(deployContracts);
-      await expect(
-        connect(dispatcherContract, stranger).initLiquidityMoverRole([])
-      ).to.be.revertedWithCustomError(
-        dispatcherContract,
-        ERROR_NAME_ACCESS_CONTROL_UNAUTHORIZED_ACCOUNT
-      ).withArgs(stranger.address, OWNER_ROLE);
+      await expect(connect(dispatcherContract, stranger).initLiquidityMoverRole([]))
+        .to.be.revertedWithCustomError(dispatcherContract, ERROR_NAME_ACCESS_CONTROL_UNAUTHORIZED_ACCOUNT)
+        .withArgs(stranger.address, OWNER_ROLE);
     });
 
     it("Is reverted if one of the provided accounts has the zero address", async () => {
       const { dispatcherContract } = await setUpFixture(deployContracts);
-      await expect(
-        dispatcherContract.initLiquidityMoverRole([stranger.address, ADDRESS_ZERO])
-      ).to.be.revertedWithCustomError(
-        dispatcherContract,
-        ERROR_NAME_ACCOUNT_ADDRESS_ZERO
-      );
+      await expect(dispatcherContract.initLiquidityMoverRole([stranger.address, ADDRESS_ZERO]))
+        .to.be.revertedWithCustomError(dispatcherContract, ERROR_NAME_ACCOUNT_ADDRESS_ZERO);
     });
   });
 
@@ -296,22 +288,15 @@ describe("Contract 'Dispatcher'", async () => {
 
     it("Is reverted if the caller does not have the owner role", async () => {
       const { dispatcherContract } = await setUpFixture(deployContracts);
-      await expect(
-        connect(dispatcherContract, stranger).removeLiquidityMoverRole([])
-      ).to.be.revertedWithCustomError(
-        dispatcherContract,
-        ERROR_NAME_ACCESS_CONTROL_UNAUTHORIZED_ACCOUNT
-      ).withArgs(stranger.address, OWNER_ROLE);
+      await expect(connect(dispatcherContract, stranger).removeLiquidityMoverRole([]))
+        .to.be.revertedWithCustomError(dispatcherContract, ERROR_NAME_ACCESS_CONTROL_UNAUTHORIZED_ACCOUNT)
+        .withArgs(stranger.address, OWNER_ROLE);
     });
 
     it("Is reverted if one of the provided accounts has the zero address", async () => {
       const { dispatcherContract } = await setUpFixture(deployContracts);
-      await expect(
-        dispatcherContract.removeLiquidityMoverRole([stranger.address, ADDRESS_ZERO])
-      ).to.be.revertedWithCustomError(
-        dispatcherContract,
-        ERROR_NAME_ACCOUNT_ADDRESS_ZERO
-      );
+      await expect(dispatcherContract.removeLiquidityMoverRole([stranger.address, ADDRESS_ZERO]))
+        .to.be.revertedWithCustomError(dispatcherContract, ERROR_NAME_ACCOUNT_ADDRESS_ZERO);
     });
   });
 
@@ -371,11 +356,9 @@ describe("Contract 'Dispatcher'", async () => {
         for (let i = 0; i < accounts.length; ++i) {
           const account = accounts[i];
           const expectedCounter = counter + i + 1;
-          await expect(tx).to.emit(compoundAgentMock, EVENT_NAME_MOCK_CONFIGURE_ADMIN_CALLED).withArgs(
-            account,
-            newStatus,
-            expectedCounter
-          );
+          await expect(tx)
+            .to.emit(compoundAgentMock, EVENT_NAME_MOCK_CONFIGURE_ADMIN_CALLED)
+            .withArgs(account, newStatus, expectedCounter);
         }
       } else {
         await expect(tx).not.to.emit(compoundAgentMock, EVENT_NAME_MOCK_CONFIGURE_ADMIN_CALLED);
@@ -406,9 +389,8 @@ describe("Contract 'Dispatcher'", async () => {
       const { dispatcherContract, compoundAgentMock } = await setUpFixture(deployContracts);
       await pauseContract(dispatcherContract);
       const newState = true;
-      await expect(
-        dispatcherContract.configureAdminBatchForCompoundAgent(getAddress(compoundAgentMock), newState, [])
-      ).to.be.revertedWithCustomError(dispatcherContract, ERROR_NAME_ENFORCED_PAUSE);
+      await expect(dispatcherContract.configureAdminBatchForCompoundAgent(getAddress(compoundAgentMock), newState, []))
+        .to.be.revertedWithCustomError(dispatcherContract, ERROR_NAME_ENFORCED_PAUSE);
     });
 
     it("Is reverted if the caller does not have the owner role", async () => {
