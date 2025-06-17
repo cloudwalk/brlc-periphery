@@ -6,8 +6,8 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
  * @title CapybaraLiquidityPoolMock contract
- * @author CloudWalk Inc. (See https://cloudwalk.io)
- * @dev A simplified version of the liquidity pool smart-contract of the `CapybaraFinance` protocol
+ * @author CloudWalk Inc. (See https://www.cloudwalk.io)
+ * @dev A simplified version of the liquidity pool smart contract of the `CapybaraFinance` protocol
  *      to use in tests for other contracts.
  */
 contract CapybaraLiquidityPoolMock {
@@ -17,9 +17,7 @@ contract CapybaraLiquidityPoolMock {
     // ------------------ Events ---------------------------------- //
 
     /// @dev Emitted when the `deposit()` function is called with the parameters of the function.
-    event MockDepositCalled(
-        uint256 amount
-    );
+    event MockDepositCalled(uint256 amount);
 
     // ------------------ Constructor ----------------------------- //
 
@@ -31,7 +29,7 @@ contract CapybaraLiquidityPoolMock {
         underlyingToken = underlyingToken_;
     }
 
-    // ------------------ Functions ------------------------------ //
+    // ------------------ Transactional functions ----------------- //
 
     /**
      * @dev Imitates the same-name function of the liquidity pool of the `CapybaraFinance` protocol.

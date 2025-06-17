@@ -1,9 +1,9 @@
-import { ethers, network, upgrades } from "hardhat";
+import { ethers, upgrades } from "hardhat";
 import { expect } from "chai";
 import { Contract, ContractFactory } from "ethers";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { checkContractUupsUpgrading, connect, getAddress, proveTx } from "../test-utils/eth";
+import { setUpFixture } from "../test-utils/common";
 
 const ADDRESS_ZERO = ethers.ZeroAddress;
 
@@ -36,37 +36,35 @@ function checkEquality<T extends Record<string, unknown>>(actualObject: T, expec
   });
 }
 
-async function setUpFixture<T>(func: () => Promise<T>): Promise<T> {
-  if (network.name === "hardhat") {
-    return loadFixture(func);
-  } else {
-    return func();
-  }
-}
-
 describe("Contract 'Dispatcher'", async () => {
-  // Errors of the lib contracts
-  const REVERT_ERROR_IF_CONTRACT_INITIALIZATION_IS_INVALID = "InvalidInitialization";
-  const REVERT_ERROR_IF_CONTRACT_IS_NOT_INITIALIZING = "NotInitializing";
-  const REVERT_ERROR_IF_CONTRACT_IS_PAUSED = "EnforcedPause";
-  const REVERT_ERROR_IF_UNAUTHORIZED_ACCOUNT = "AccessControlUnauthorizedAccount";
-
-  // Errors of the contracts under test
-  const REVERT_ERROR_IF_IMPLEMENTATION_ADDRESS_INVALID = "Dispatcher_ImplementationAddressInvalid";
-  const REVERT_ERROR_IF_ACCOUNT_ADDRESS_ZERO = "Dispatcher_AccountAddressZero";
+  // Events of the ERC20 contract
+  const EVENT_NAME_TRANSFER = "Transfer";
 
   // Events of the mock contracts
   const EVENT_NAME_MOCK_CONFIGURE_ADMIN_CALLED = "MockConfigureAdminCalled";
   const EVENT_NAME_MOCK_DEPOSIT_CALLED = "MockDepositCalled";
-  const EVENT_NAME_MOCK_TRANSFER_OWNERSHIP_CALLED = "MockTransferOwnershipCalled";
   const EVENT_NAME_MOCK_REDEEM_UNDERLYING_CALLED = "MockRedeemUnderlyingCalled";
+  const EVENT_NAME_MOCK_TRANSFER_OWNERSHIP_CALLED = "MockTransferOwnershipCalled";
 
-  // Events of the ERC20 contract
-  const EVENT_NAME_TRANSFER = "Transfer";
+  // Errors of the library contracts
+  const ERROR_NAME_ACCESS_CONTROL_UNAUTHORIZED_ACCOUNT = "AccessControlUnauthorizedAccount";
+  const ERROR_NAME_ENFORCED_PAUSE = "EnforcedPause";
+  const ERROR_NAME_INVALID_INITIALIZATION = "InvalidInitialization";
+
+  // Errors of the contracts under test
+  const ERROR_NAME_ACCOUNT_ADDRESS_ZERO = "Dispatcher_AccountAddressZero";
+  const ERROR_NAME_IMPLEMENTATION_ADDRESS_INVALID = "Dispatcher_ImplementationAddressInvalid";
+
+  const DEFAULT_ADMIN_ROLE: string = ethers.ZeroHash;
+  const OWNER_ROLE: string = ethers.id("OWNER_ROLE");
+  const GRANTOR_ROLE: string = ethers.id("GRANTOR_ROLE");
+  const PAUSER_ROLE: string = ethers.id("PAUSER_ROLE");
+  const RESCUER_ROLE: string = ethers.id("RESCUER_ROLE");
+  const LIQUIDITY_MOVER_ROLE: string = ethers.id("LIQUIDITY_MOVER_ROLE");
 
   const EXPECTED_VERSION: Version = {
     major: 1,
-    minor: 1,
+    minor: 2,
     patch: 0
   };
 
@@ -76,22 +74,16 @@ describe("Contract 'Dispatcher'", async () => {
   let liquidityMover: HardhatEthersSigner;
   let stranger: HardhatEthersSigner;
 
-  const DEFAULT_ADMIN_ROLE: string = ethers.ZeroHash;
-  const OWNER_ROLE: string = ethers.id("OWNER_ROLE");
-  const PAUSER_ROLE: string = ethers.id("PAUSER_ROLE");
-  const RESCUER_ROLE: string = ethers.id("RESCUER_ROLE");
-  const LIQUIDITY_MOVER_ROLE: string = ethers.id("LIQUIDITY_MOVER_ROLE");
-
   before(async () => {
     [deployer, liquidityMover, stranger] = await ethers.getSigners();
 
     // Contract factories with the explicitly specified deployer account
-    dispatcherContractFactory = await ethers.getContractFactory("DispatcherTestable");
+    dispatcherContractFactory = await ethers.getContractFactory("Dispatcher");
     dispatcherContractFactory = dispatcherContractFactory.connect(deployer);
   });
 
   async function deployContracts(): Promise<Fixture> {
-    let dispatcherContract: Contract = await upgrades.deployProxy(dispatcherContractFactory);
+    let dispatcherContract = await upgrades.deployProxy(dispatcherContractFactory) as Contract;
     await dispatcherContract.waitForDeployment();
     dispatcherContract = connect(dispatcherContract, deployer); // Explicitly specifying the initial account
 
@@ -101,15 +93,13 @@ describe("Contract 'Dispatcher'", async () => {
     const capybaraLiquidityPoolMockFactory =
       (await ethers.getContractFactory("CapybaraLiquidityPoolMock")).connect(deployer);
 
-    let tokenMock: Contract = (await tokenMockFactory.deploy("ERC20 Test", "TEST")) as Contract;
+    let tokenMock = (await tokenMockFactory.deploy("ERC20 Test", "TEST")) as Contract;
     await tokenMock.waitForDeployment();
 
-    let compoundAgentMock: Contract = (await compoundAgentMockFactory.deploy(getAddress(tokenMock))) as Contract;
+    let compoundAgentMock = (await compoundAgentMockFactory.deploy(getAddress(tokenMock))) as Contract;
     await compoundAgentMock.waitForDeployment();
 
-    let capybaraLiquidityPoolMock: Contract = (await capybaraLiquidityPoolMockFactory.deploy(
-      getAddress(tokenMock)
-    )) as Contract;
+    let capybaraLiquidityPoolMock = (await capybaraLiquidityPoolMockFactory.deploy(getAddress(tokenMock))) as Contract;
     await capybaraLiquidityPoolMock.waitForDeployment();
 
     // Explicitly specifying the initial account
@@ -126,6 +116,7 @@ describe("Contract 'Dispatcher'", async () => {
   }
 
   async function pauseContract(contract: Contract) {
+    await proveTx(contract.grantRole(GRANTOR_ROLE, deployer.address));
     await proveTx(contract.grantRole(PAUSER_ROLE, deployer.address));
     await proveTx(contract.pause());
   }
@@ -136,18 +127,21 @@ describe("Contract 'Dispatcher'", async () => {
 
       // Role hashes
       expect(await dispatcherContract.OWNER_ROLE()).to.equal(OWNER_ROLE);
+      expect(await dispatcherContract.GRANTOR_ROLE()).to.equal(GRANTOR_ROLE);
       expect(await dispatcherContract.PAUSER_ROLE()).to.equal(PAUSER_ROLE);
       expect(await dispatcherContract.RESCUER_ROLE()).to.equal(RESCUER_ROLE);
       expect(await dispatcherContract.LIQUIDITY_MOVER_ROLE()).to.equal(LIQUIDITY_MOVER_ROLE);
 
       // The role admins
       expect(await dispatcherContract.getRoleAdmin(OWNER_ROLE)).to.equal(OWNER_ROLE);
-      expect(await dispatcherContract.getRoleAdmin(PAUSER_ROLE)).to.equal(OWNER_ROLE);
-      expect(await dispatcherContract.getRoleAdmin(RESCUER_ROLE)).to.equal(OWNER_ROLE);
+      expect(await dispatcherContract.getRoleAdmin(GRANTOR_ROLE)).to.equal(OWNER_ROLE);
+      expect(await dispatcherContract.getRoleAdmin(PAUSER_ROLE)).to.equal(GRANTOR_ROLE);
+      expect(await dispatcherContract.getRoleAdmin(RESCUER_ROLE)).to.equal(GRANTOR_ROLE);
       expect(await dispatcherContract.getRoleAdmin(LIQUIDITY_MOVER_ROLE)).to.equal(DEFAULT_ADMIN_ROLE);
 
       // The deployer should have the owner role, but not the other roles
       expect(await dispatcherContract.hasRole(OWNER_ROLE, deployer.address)).to.equal(true);
+      expect(await dispatcherContract.hasRole(GRANTOR_ROLE, deployer.address)).to.equal(false);
       expect(await dispatcherContract.hasRole(PAUSER_ROLE, deployer.address)).to.equal(false);
       expect(await dispatcherContract.hasRole(RESCUER_ROLE, deployer.address)).to.equal(false);
       expect(await dispatcherContract.hasRole(LIQUIDITY_MOVER_ROLE, deployer.address)).to.equal(false);
@@ -158,23 +152,16 @@ describe("Contract 'Dispatcher'", async () => {
 
     it("Is reverted if it is called a second time", async () => {
       const { dispatcherContract } = await setUpFixture(deployContracts);
-      await expect(
-        dispatcherContract.initialize()
-      ).to.be.revertedWithCustomError(dispatcherContract, REVERT_ERROR_IF_CONTRACT_INITIALIZATION_IS_INVALID);
+      await expect(dispatcherContract.initialize())
+        .to.be.revertedWithCustomError(dispatcherContract, ERROR_NAME_INVALID_INITIALIZATION);
     });
 
-    it("Is reverted if the internal initializer is called outside the init process", async () => {
-      const { dispatcherContract } = await setUpFixture(deployContracts);
-      await expect(
-        dispatcherContract.call_parent_initialize()
-      ).to.be.revertedWithCustomError(dispatcherContract, REVERT_ERROR_IF_CONTRACT_IS_NOT_INITIALIZING);
-    });
+    it("Is reverted for the contract implementation if it is called even for the first time", async () => {
+      const dispatcherImplementation = await dispatcherContractFactory.deploy() as Contract;
+      await dispatcherImplementation.waitForDeployment();
 
-    it("Is reverted if the unchained internal initializer is called outside the init process", async () => {
-      const { dispatcherContract } = await setUpFixture(deployContracts);
-      await expect(
-        dispatcherContract.call_parent_initialize_unchained()
-      ).to.be.revertedWithCustomError(dispatcherContract, REVERT_ERROR_IF_CONTRACT_IS_NOT_INITIALIZING);
+      await expect(dispatcherImplementation.initialize())
+        .to.be.revertedWithCustomError(dispatcherImplementation, ERROR_NAME_INVALID_INITIALIZATION);
     });
   });
 
@@ -188,7 +175,7 @@ describe("Contract 'Dispatcher'", async () => {
       const { dispatcherContract } = await setUpFixture(deployContracts);
 
       await expect(connect(dispatcherContract, stranger).upgradeToAndCall(getAddress(dispatcherContract), "0x"))
-        .to.be.revertedWithCustomError(dispatcherContract, REVERT_ERROR_IF_UNAUTHORIZED_ACCOUNT)
+        .to.be.revertedWithCustomError(dispatcherContract, ERROR_NAME_ACCESS_CONTROL_UNAUTHORIZED_ACCOUNT)
         .withArgs(stranger.address, OWNER_ROLE);
     });
   });
@@ -203,7 +190,7 @@ describe("Contract 'Dispatcher'", async () => {
       const { dispatcherContract } = await setUpFixture(deployContracts);
 
       await expect(connect(dispatcherContract, stranger).upgradeTo(getAddress(dispatcherContract)))
-        .to.be.revertedWithCustomError(dispatcherContract, REVERT_ERROR_IF_UNAUTHORIZED_ACCOUNT)
+        .to.be.revertedWithCustomError(dispatcherContract, ERROR_NAME_ACCESS_CONTROL_UNAUTHORIZED_ACCOUNT)
         .withArgs(stranger.address, OWNER_ROLE);
     });
 
@@ -211,7 +198,7 @@ describe("Contract 'Dispatcher'", async () => {
       const { dispatcherContract, compoundAgentMock } = await setUpFixture(deployContracts);
 
       await expect(dispatcherContract.upgradeTo(getAddress(compoundAgentMock)))
-        .to.be.revertedWithCustomError(dispatcherContract, REVERT_ERROR_IF_IMPLEMENTATION_ADDRESS_INVALID);
+        .to.be.revertedWithCustomError(dispatcherContract, ERROR_NAME_IMPLEMENTATION_ADDRESS_INVALID);
     });
   });
 
@@ -227,7 +214,7 @@ describe("Contract 'Dispatcher'", async () => {
     async function executeAndCheck(dispatcherContract: Contract, accounts: string[]) {
       await proveTx(dispatcherContract.initLiquidityMoverRole(accounts));
 
-      expect(await dispatcherContract.getRoleAdmin(LIQUIDITY_MOVER_ROLE)).to.equal(OWNER_ROLE);
+      expect(await dispatcherContract.getRoleAdmin(LIQUIDITY_MOVER_ROLE)).to.equal(GRANTOR_ROLE);
       for (const account of accounts) {
         expect(await dispatcherContract.hasRole(LIQUIDITY_MOVER_ROLE, account))
           .to.equal(true, `The role is NOT set for account with address ${account}`);
@@ -254,22 +241,15 @@ describe("Contract 'Dispatcher'", async () => {
 
     it("Is reverted if the caller does not have the owner role", async () => {
       const { dispatcherContract } = await setUpFixture(deployContracts);
-      await expect(
-        connect(dispatcherContract, stranger).initLiquidityMoverRole([])
-      ).to.be.revertedWithCustomError(
-        dispatcherContract,
-        REVERT_ERROR_IF_UNAUTHORIZED_ACCOUNT
-      ).withArgs(stranger.address, OWNER_ROLE);
+      await expect(connect(dispatcherContract, stranger).initLiquidityMoverRole([]))
+        .to.be.revertedWithCustomError(dispatcherContract, ERROR_NAME_ACCESS_CONTROL_UNAUTHORIZED_ACCOUNT)
+        .withArgs(stranger.address, OWNER_ROLE);
     });
 
     it("Is reverted if one of the provided accounts has the zero address", async () => {
       const { dispatcherContract } = await setUpFixture(deployContracts);
-      await expect(
-        dispatcherContract.initLiquidityMoverRole([stranger.address, ADDRESS_ZERO])
-      ).to.be.revertedWithCustomError(
-        dispatcherContract,
-        REVERT_ERROR_IF_ACCOUNT_ADDRESS_ZERO
-      );
+      await expect(dispatcherContract.initLiquidityMoverRole([stranger.address, ADDRESS_ZERO]))
+        .to.be.revertedWithCustomError(dispatcherContract, ERROR_NAME_ACCOUNT_ADDRESS_ZERO);
     });
   });
 
@@ -308,22 +288,15 @@ describe("Contract 'Dispatcher'", async () => {
 
     it("Is reverted if the caller does not have the owner role", async () => {
       const { dispatcherContract } = await setUpFixture(deployContracts);
-      await expect(
-        connect(dispatcherContract, stranger).removeLiquidityMoverRole([])
-      ).to.be.revertedWithCustomError(
-        dispatcherContract,
-        REVERT_ERROR_IF_UNAUTHORIZED_ACCOUNT
-      ).withArgs(stranger.address, OWNER_ROLE);
+      await expect(connect(dispatcherContract, stranger).removeLiquidityMoverRole([]))
+        .to.be.revertedWithCustomError(dispatcherContract, ERROR_NAME_ACCESS_CONTROL_UNAUTHORIZED_ACCOUNT)
+        .withArgs(stranger.address, OWNER_ROLE);
     });
 
     it("Is reverted if one of the provided accounts has the zero address", async () => {
       const { dispatcherContract } = await setUpFixture(deployContracts);
-      await expect(
-        dispatcherContract.removeLiquidityMoverRole([stranger.address, ADDRESS_ZERO])
-      ).to.be.revertedWithCustomError(
-        dispatcherContract,
-        REVERT_ERROR_IF_ACCOUNT_ADDRESS_ZERO
-      );
+      await expect(dispatcherContract.removeLiquidityMoverRole([stranger.address, ADDRESS_ZERO]))
+        .to.be.revertedWithCustomError(dispatcherContract, ERROR_NAME_ACCOUNT_ADDRESS_ZERO);
     });
   });
 
@@ -351,7 +324,7 @@ describe("Contract 'Dispatcher'", async () => {
       await pauseContract(dispatcherContract);
       await expect(
         dispatcherContract.transferOwnershipForCompoundAgent(getAddress(compoundAgentMock), stranger.address)
-      ).to.be.revertedWithCustomError(dispatcherContract, REVERT_ERROR_IF_CONTRACT_IS_PAUSED);
+      ).to.be.revertedWithCustomError(dispatcherContract, ERROR_NAME_ENFORCED_PAUSE);
     });
 
     it("Is reverted if the caller does not have the owner role", async () => {
@@ -363,7 +336,7 @@ describe("Contract 'Dispatcher'", async () => {
         )
       ).to.be.revertedWithCustomError(
         dispatcherContract,
-        REVERT_ERROR_IF_UNAUTHORIZED_ACCOUNT
+        ERROR_NAME_ACCESS_CONTROL_UNAUTHORIZED_ACCOUNT
       ).withArgs(stranger.address, OWNER_ROLE);
     });
   });
@@ -383,11 +356,9 @@ describe("Contract 'Dispatcher'", async () => {
         for (let i = 0; i < accounts.length; ++i) {
           const account = accounts[i];
           const expectedCounter = counter + i + 1;
-          await expect(tx).to.emit(compoundAgentMock, EVENT_NAME_MOCK_CONFIGURE_ADMIN_CALLED).withArgs(
-            account,
-            newStatus,
-            expectedCounter
-          );
+          await expect(tx)
+            .to.emit(compoundAgentMock, EVENT_NAME_MOCK_CONFIGURE_ADMIN_CALLED)
+            .withArgs(account, newStatus, expectedCounter);
         }
       } else {
         await expect(tx).not.to.emit(compoundAgentMock, EVENT_NAME_MOCK_CONFIGURE_ADMIN_CALLED);
@@ -418,9 +389,8 @@ describe("Contract 'Dispatcher'", async () => {
       const { dispatcherContract, compoundAgentMock } = await setUpFixture(deployContracts);
       await pauseContract(dispatcherContract);
       const newState = true;
-      await expect(
-        dispatcherContract.configureAdminBatchForCompoundAgent(getAddress(compoundAgentMock), newState, [])
-      ).to.be.revertedWithCustomError(dispatcherContract, REVERT_ERROR_IF_CONTRACT_IS_PAUSED);
+      await expect(dispatcherContract.configureAdminBatchForCompoundAgent(getAddress(compoundAgentMock), newState, []))
+        .to.be.revertedWithCustomError(dispatcherContract, ERROR_NAME_ENFORCED_PAUSE);
     });
 
     it("Is reverted if the caller does not have the owner role", async () => {
@@ -434,7 +404,7 @@ describe("Contract 'Dispatcher'", async () => {
         )
       ).to.be.revertedWithCustomError(
         dispatcherContract,
-        REVERT_ERROR_IF_UNAUTHORIZED_ACCOUNT
+        ERROR_NAME_ACCESS_CONTROL_UNAUTHORIZED_ACCOUNT
       ).withArgs(stranger.address, OWNER_ROLE);
     });
   });
@@ -486,7 +456,7 @@ describe("Contract 'Dispatcher'", async () => {
           getAddress(compoundAgentMock),
           getAddress(capybaraLiquidityPoolMock)
         )
-      ).to.be.revertedWithCustomError(dispatcherContract, REVERT_ERROR_IF_CONTRACT_IS_PAUSED);
+      ).to.be.revertedWithCustomError(dispatcherContract, ERROR_NAME_ENFORCED_PAUSE);
     });
 
     it("Is reverted if the caller does not have the liquidity mover role", async () => {
@@ -501,7 +471,7 @@ describe("Contract 'Dispatcher'", async () => {
         )
       ).to.be.revertedWithCustomError(
         dispatcherContract,
-        REVERT_ERROR_IF_UNAUTHORIZED_ACCOUNT
+        ERROR_NAME_ACCESS_CONTROL_UNAUTHORIZED_ACCOUNT
       ).withArgs(deployer.address, LIQUIDITY_MOVER_ROLE);
 
       await expect(
@@ -512,7 +482,7 @@ describe("Contract 'Dispatcher'", async () => {
         )
       ).to.be.revertedWithCustomError(
         dispatcherContract,
-        REVERT_ERROR_IF_UNAUTHORIZED_ACCOUNT
+        ERROR_NAME_ACCESS_CONTROL_UNAUTHORIZED_ACCOUNT
       ).withArgs(stranger.address, LIQUIDITY_MOVER_ROLE);
     });
   });

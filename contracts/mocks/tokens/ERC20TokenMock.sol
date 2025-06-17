@@ -19,7 +19,7 @@ contract ERC20TokenMock is ERC20 {
      */
     constructor(string memory name_, string memory symbol_) ERC20(name_, symbol_) {}
 
-    // ------------------ Functions ------------------------------- //
+    // ------------------ Transactional functions ----------------- //
 
     /**
      * @dev Calls the appropriate internal function to mint needed amount of tokens for an account.

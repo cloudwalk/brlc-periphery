@@ -12,14 +12,22 @@ import { UUPSExtUpgradeable } from "./base/UUPSExtUpgradeable.sol";
 
 import { DispatcherStorage } from "./DispatcherStorage.sol";
 
-/// @dev Interface for the CompoundAgent contract with the necessary functions.
+/**
+ * @title ICompoundAgent interface
+ * @author CloudWalk Inc. (See https://www.cloudwalk.io)
+ * @dev Interface for the CompoundAgent contract with the necessary functions.
+ */
 interface ICompoundAgent {
     function transferOwnership(address newOwner) external;
     function configureAdmin(address account, bool newStatus) external;
     function redeemUnderlying(uint256 redeemAmount) external;
 }
 
-/// @dev Interface for the liquidity pool contract from the `CapybaraFinance` protocol with the necessary functions.
+/**
+ * @title ILiquidityPool interface
+ * @author CloudWalk Inc. (See https://www.cloudwalk.io)
+ * @dev Interface for the liquidity pool contract from the `CapybaraFinance` protocol with the necessary functions.
+ */
 interface ILiquidityPool {
     function deposit(uint256 amount) external;
     function token() external view returns (address);
@@ -28,7 +36,7 @@ interface ILiquidityPool {
 /**
  * @title Dispatcher contract
  * @author CloudWalk Inc. (See https://www.cloudwalk.io)
- * @dev The contract that responsible for performing various actions on other contracts.
+ * @dev The contract that is responsible for performing various actions on other contracts.
  */
 contract Dispatcher is
     DispatcherStorage,
@@ -40,10 +48,7 @@ contract Dispatcher is
 {
     // ------------------ Constants ------------------------------- //
 
-    /// @dev The role of this contract owner.
-    bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");
-
-    /// @dev The role that allows to move liquidity from Compound to Capybara.
+    /// @dev The role of a liquidity mover that is allowed to move liquidity from Compound to Capybara.
     bytes32 public constant LIQUIDITY_MOVER_ROLE = keccak256("LIQUIDITY_MOVER_ROLE");
 
     // ------------------ Errors ---------------------------------- //
@@ -54,47 +59,37 @@ contract Dispatcher is
     /// @dev Thrown if the provided account address is zero.
     error Dispatcher_AccountAddressZero();
 
+    // ------------------ Constructor ----------------------------- //
+
+    /**
+     * @dev Constructor that prohibits the initialization of the implementation of the upgradeable contract.
+     *
+     * See details:
+     * https://docs.openzeppelin.com/upgrades-plugins/writing-upgradeable#initializing_the_implementation_contract
+     *
+     * @custom:oz-upgrades-unsafe-allow constructor
+     */
+    constructor() {
+        _disableInitializers();
+    }
+
     // ------------------ Initializers ---------------------------- //
 
     /**
-     * @dev Initializer of the upgradable contract.
+     * @dev The initialize function of the upgradeable contract.
      *
-     * See details https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable.
+     * See details: https://docs.openzeppelin.com/upgrades-plugins/writing-upgradeable
      */
     function initialize() external initializer {
-        __Dispatcher_init();
-    }
-
-    /**
-     * @dev Internal initializer of the upgradable contract.
-     *
-     * See details https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable.
-     */
-    function __Dispatcher_init() internal onlyInitializing {
-        __Context_init_unchained();
-        __ERC165_init_unchained();
-        __AccessControl_init_unchained();
         __AccessControlExt_init_unchained();
-        __Pausable_init_unchained();
-        __PausableExt_init_unchained(OWNER_ROLE);
-        __Rescuable_init_unchained(OWNER_ROLE);
-        __UUPSUpgradeable_init_unchained();
+        __PausableExt_init_unchained();
+        __Rescuable_init_unchained();
+        __UUPSExt_init_unchained(); // This is needed only to avoid errors during coverage assessment
 
-        __Dispatcher_init_unchained();
-    }
-
-    /**
-     * @dev Unchained internal initializer of the upgradable contract.
-     *
-     * See details https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable.
-     *
-     */
-    function __Dispatcher_init_unchained() internal onlyInitializing {
-        _setRoleAdmin(OWNER_ROLE, OWNER_ROLE);
         _grantRole(OWNER_ROLE, _msgSender());
     }
 
-    // ------------------ Functions ------------------------------- //
+    // ------------------ Transactional functions ----------------- //
 
     /**
      * @dev Initializes the liquidity mover role for a batch of accounts and
@@ -107,7 +102,7 @@ contract Dispatcher is
      * @param accounts The addresses of the accounts to initialize the liquidity mover role for.
      */
     function initLiquidityMoverRole(address[] calldata accounts) external onlyRole(OWNER_ROLE) {
-        _setRoleAdmin(LIQUIDITY_MOVER_ROLE, OWNER_ROLE);
+        _setRoleAdmin(LIQUIDITY_MOVER_ROLE, GRANTOR_ROLE);
         uint256 len = accounts.length;
         for (uint256 i = 0; i < len; ++i) {
             address account = accounts[i];
@@ -188,7 +183,7 @@ contract Dispatcher is
      *
      * - The contract must not be paused.
      * - The caller must have the {LIQUIDITY_MOVER_ROLE} role.
-     *  
+     *
      * @param amount The amount of liquidity to move.
      * @param compoundAgent The address of the CompoundAgent contract to move liquidity from.
      * @param capybaraLiquidityPool The address of the liquidity pool to move liquidity to.
