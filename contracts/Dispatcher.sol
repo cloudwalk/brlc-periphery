@@ -11,6 +11,7 @@ import { Versionable } from "./base/Versionable.sol";
 import { UUPSExtUpgradeable } from "./base/UUPSExtUpgradeable.sol";
 
 import { DispatcherStorage } from "./DispatcherStorage.sol";
+import { IDispatcher, IDispatcherConfiguration, IDispatcherPrimary } from "./interfaces/IDispatcher.sol";
 
 /**
  * @title ICompoundAgent interface
@@ -44,20 +45,13 @@ contract Dispatcher is
     PausableExtUpgradeable,
     RescuableUpgradeable,
     UUPSExtUpgradeable,
+    IDispatcher,
     Versionable
 {
     // ------------------ Constants ------------------------------- //
 
     /// @dev The role of a liquidity mover that is allowed to move liquidity from Compound to Capybara.
     bytes32 public constant LIQUIDITY_MOVER_ROLE = keccak256("LIQUIDITY_MOVER_ROLE");
-
-    // ------------------ Errors ---------------------------------- //
-
-    /// @dev Thrown if the provided new implementation address is not of a dispatcher contract.
-    error Dispatcher_ImplementationAddressInvalid();
-
-    /// @dev Thrown if the provided account address is zero.
-    error Dispatcher_AccountAddressZero();
 
     // ------------------ Constructor ----------------------------- //
 
@@ -92,14 +86,11 @@ contract Dispatcher is
     // ------------------ Transactional functions ----------------- //
 
     /**
-     * @dev Initializes the liquidity mover role for a batch of accounts and
-     *      sets the owner role as the admin for the liquidity mover role.
-     *
-     * Requirements:
+     * @inheritdoc IDispatcherConfiguration
+     * @dev Requirements:
      *
      * - The caller must have the {OWNER_ROLE} role.
      *
-     * @param accounts The addresses of the accounts to initialize the liquidity mover role for.
      */
     function initLiquidityMoverRole(address[] calldata accounts) external onlyRole(OWNER_ROLE) {
         _setRoleAdmin(LIQUIDITY_MOVER_ROLE, GRANTOR_ROLE);
@@ -114,14 +105,10 @@ contract Dispatcher is
     }
 
     /**
-     * @dev Removes the liquidity mover role for a batch of accounts
-     *      and sets the default role as the admin for the liquidity mover role.
-     *
-     * Requirements:
+     * @inheritdoc IDispatcherConfiguration
+     * @dev Requirements:
      *
      * - The caller must have the {OWNER_ROLE} role.
-     *
-     * @param accounts The addresses of the accounts to remove the liquidity mover role for.
      */
     function removeLiquidityMoverRole(address[] calldata accounts) external onlyRole(OWNER_ROLE) {
         uint256 len = accounts.length;
@@ -136,15 +123,12 @@ contract Dispatcher is
     }
 
     /**
-     * @dev Transfers ownership of a CompoundAgent contract to a new owner.
-     *
-     * Requirements:
+     * @inheritdoc IDispatcherConfiguration
+     * @dev Requirements:
      *
      * - The contract must not be paused.
      * - The caller must have the {OWNER_ROLE} role.
      *
-     * @param compoundAgent The address of the CompoundAgent contract to transfer ownership for.
-     * @param newOwner The address that will become the new owner of the CompoundAgent contract.
      */
     function transferOwnershipForCompoundAgent(
         address compoundAgent,
@@ -154,16 +138,11 @@ contract Dispatcher is
     }
 
     /**
-     * @dev Configures the admin status for a batch of accounts for a CompoundAgent contract.
-     *
-     * Requirements:
+     * @inheritdoc IDispatcherConfiguration
+     * @dev Requirements:
      *
      * - The contract must not be paused.
      * - The caller must have the {OWNER_ROLE} role.
-     *
-     * @param compoundAgent The address of the CompoundAgent contract to configure admin status for.
-     * @param newStatus The new admin status to set for the accounts.
-     * @param accounts The addresses of the accounts to configure admin status for.
      */
     function configureAdminBatchForCompoundAgent(
         address compoundAgent,
@@ -177,16 +156,12 @@ contract Dispatcher is
     }
 
     /**
-     * @dev Moves liquidity from a CompoundAgent contract to a liquidity pool of the `CapybaraFinance` protocol.
-     *
-     * Requirements:
+     * @inheritdoc IDispatcherPrimary
+     * @dev Requirements:
      *
      * - The contract must not be paused.
      * - The caller must have the {LIQUIDITY_MOVER_ROLE} role.
      *
-     * @param amount The amount of liquidity to move.
-     * @param compoundAgent The address of the CompoundAgent contract to move liquidity from.
-     * @param capybaraLiquidityPool The address of the liquidity pool to move liquidity to.
      */
     function moveLiquidityFromCompoundToCapybara(
         uint256 amount,
