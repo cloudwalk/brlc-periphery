@@ -10,29 +10,11 @@ import { RescuableUpgradeable } from "./base/RescuableUpgradeable.sol";
 import { Versionable } from "./base/Versionable.sol";
 import { UUPSExtUpgradeable } from "./base/UUPSExtUpgradeable.sol";
 
+import { ICompoundAgent } from "./interfaces/ICompoundAgent.sol";
+import { ILiquidityPool } from "./interfaces/ILiquidityPool.sol";
+
 import { DispatcherStorage } from "./DispatcherStorage.sol";
 import { IDispatcher, IDispatcherConfiguration, IDispatcherPrimary } from "./interfaces/IDispatcher.sol";
-
-/**
- * @title ICompoundAgent interface
- * @author CloudWalk Inc. (See https://www.cloudwalk.io)
- * @dev Interface for the CompoundAgent contract with the necessary functions.
- */
-interface ICompoundAgent {
-    function transferOwnership(address newOwner) external;
-    function configureAdmin(address account, bool newStatus) external;
-    function redeemUnderlying(uint256 redeemAmount) external;
-}
-
-/**
- * @title ILiquidityPool interface
- * @author CloudWalk Inc. (See https://www.cloudwalk.io)
- * @dev Interface for the liquidity pool contract from the `CapybaraFinance` protocol with the necessary functions.
- */
-interface ILiquidityPool {
-    function deposit(uint256 amount) external;
-    function token() external view returns (address);
-}
 
 /**
  * @title Dispatcher contract
