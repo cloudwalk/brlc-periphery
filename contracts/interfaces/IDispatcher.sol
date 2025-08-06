@@ -6,8 +6,6 @@ pragma solidity ^0.8.4;
  * @title IDispatcherPrimary interface
  * @author CloudWalk Inc. (See https://www.cloudwalk.io)
  * @dev The primary part of the dispatcher smart contract interface.
- *
- * See details about the contract in the comments of the {IDispatcher} interface.
  */
 interface IDispatcherPrimary {
     /**
