@@ -69,7 +69,7 @@ interface IDispatcherConfiguration {
 /**
  * @title IDispatcherErrors interface
  * @author CloudWalk Inc. (See https://www.cloudwalk.io)
- * @dev Defines the custom errors used in the dispatcher contract.
+ * @dev The custom errors used in the dispatcher contract.
  */
 interface IDispatcherErrors {
     /// @dev Thrown if the provided new implementation address is not of a dispatcher contract.
