@@ -10,7 +10,6 @@ pragma solidity 0.8.24;
  * See details about the contract in the comments of the {IDispatcher} interface.
  */
 interface IDispatcherPrimary {
-    // --- Transactional functions ----- //
     /**
      * @dev Moves liquidity from a CompoundAgent contract to a liquidity pool of the `CapybaraFinance` protocol.
      *
@@ -31,7 +30,6 @@ interface IDispatcherPrimary {
  * @dev The configuration part of the dispatcher smart contract interface.
  */
 interface IDispatcherConfiguration {
-    // --- Transactional functions ----- //
     /**
      * @dev Initializes the liquidity mover role for a batch of accounts and
      *      sets the owner role as the admin for the liquidity mover role.
