@@ -24,14 +24,14 @@ interface Fixture {
 
 function checkEquality<T extends Record<string, unknown>>(actualObject: T, expectedObject: T, index?: number) {
   const indexString = !index ? "" : ` with index: ${index}`;
-  Object.keys(expectedObject).forEach(property => {
+  Object.keys(expectedObject).forEach((property) => {
     const value = actualObject[property];
     if (typeof value === "undefined" || typeof value === "function") {
       throw Error(`Property "${property}" is not found in the actual object` + indexString);
     }
     expect(value).to.eq(
       expectedObject[property],
-      `Mismatch in the "${property}" property between the actual object and expected one` + indexString
+      `Mismatch in the "${property}" property between the actual object and expected one` + indexString,
     );
   });
 }
@@ -65,7 +65,7 @@ describe("Contract 'Dispatcher'", async () => {
   const EXPECTED_VERSION: Version = {
     major: 1,
     minor: 2,
-    patch: 1
+    patch: 1,
   };
 
   let dispatcherContractFactory: ContractFactory;
@@ -111,7 +111,7 @@ describe("Contract 'Dispatcher'", async () => {
       dispatcherContract,
       compoundAgentMock,
       capybaraLiquidityPoolMock,
-      tokenMock
+      tokenMock,
     };
   }
 
@@ -306,7 +306,7 @@ describe("Contract 'Dispatcher'", async () => {
 
       const tx = dispatcherContract.transferOwnershipForCompoundAgent(
         getAddress(compoundAgentMock),
-        newAccount
+        newAccount,
       );
 
       await expect(tx).to.emit(compoundAgentMock, EVENT_NAME_MOCK_TRANSFER_OWNERSHIP_CALLED).withArgs(newAccount);
@@ -323,7 +323,7 @@ describe("Contract 'Dispatcher'", async () => {
       const { dispatcherContract, compoundAgentMock } = await setUpFixture(deployContracts);
       await pauseContract(dispatcherContract);
       await expect(
-        dispatcherContract.transferOwnershipForCompoundAgent(getAddress(compoundAgentMock), stranger.address)
+        dispatcherContract.transferOwnershipForCompoundAgent(getAddress(compoundAgentMock), stranger.address),
       ).to.be.revertedWithCustomError(dispatcherContract, ERROR_NAME_ENFORCED_PAUSE);
     });
 
@@ -332,11 +332,11 @@ describe("Contract 'Dispatcher'", async () => {
       await expect(
         connect(dispatcherContract, stranger).transferOwnershipForCompoundAgent(
           getAddress(compoundAgentMock),
-          stranger.address
-        )
+          stranger.address,
+        ),
       ).to.be.revertedWithCustomError(
         dispatcherContract,
-        ERROR_NAME_ACCESS_CONTROL_UNAUTHORIZED_ACCOUNT
+        ERROR_NAME_ACCESS_CONTROL_UNAUTHORIZED_ACCOUNT,
       ).withArgs(stranger.address, OWNER_ROLE);
     });
   });
@@ -349,7 +349,7 @@ describe("Contract 'Dispatcher'", async () => {
       const tx = dispatcherContract.configureAdminBatchForCompoundAgent(
         getAddress(compoundAgentMock),
         newStatus,
-        accounts
+        accounts,
       );
 
       if (accounts.length > 0) {
@@ -400,11 +400,11 @@ describe("Contract 'Dispatcher'", async () => {
         connect(dispatcherContract, stranger).configureAdminBatchForCompoundAgent(
           getAddress(compoundAgentMock),
           newState,
-          []
-        )
+          [],
+        ),
       ).to.be.revertedWithCustomError(
         dispatcherContract,
-        ERROR_NAME_ACCESS_CONTROL_UNAUTHORIZED_ACCOUNT
+        ERROR_NAME_ACCESS_CONTROL_UNAUTHORIZED_ACCOUNT,
       ).withArgs(stranger.address, OWNER_ROLE);
     });
   });
@@ -423,7 +423,7 @@ describe("Contract 'Dispatcher'", async () => {
       const tx = connect(dispatcherContract, liquidityMover).moveLiquidityFromCompoundToCapybara(
         amount,
         getAddress(compoundAgentMock),
-        getAddress(capybaraLiquidityPoolMock)
+        getAddress(capybaraLiquidityPoolMock),
       );
 
       await expect(tx)
@@ -454,8 +454,8 @@ describe("Contract 'Dispatcher'", async () => {
         dispatcherContract.moveLiquidityFromCompoundToCapybara(
           amount,
           getAddress(compoundAgentMock),
-          getAddress(capybaraLiquidityPoolMock)
-        )
+          getAddress(capybaraLiquidityPoolMock),
+        ),
       ).to.be.revertedWithCustomError(dispatcherContract, ERROR_NAME_ENFORCED_PAUSE);
     });
 
@@ -467,22 +467,22 @@ describe("Contract 'Dispatcher'", async () => {
         connect(dispatcherContract, deployer).moveLiquidityFromCompoundToCapybara(
           amount,
           getAddress(compoundAgentMock),
-          getAddress(capybaraLiquidityPoolMock)
-        )
+          getAddress(capybaraLiquidityPoolMock),
+        ),
       ).to.be.revertedWithCustomError(
         dispatcherContract,
-        ERROR_NAME_ACCESS_CONTROL_UNAUTHORIZED_ACCOUNT
+        ERROR_NAME_ACCESS_CONTROL_UNAUTHORIZED_ACCOUNT,
       ).withArgs(deployer.address, LIQUIDITY_MOVER_ROLE);
 
       await expect(
         connect(dispatcherContract, stranger).moveLiquidityFromCompoundToCapybara(
           amount,
           getAddress(compoundAgentMock),
-          getAddress(capybaraLiquidityPoolMock)
-        )
+          getAddress(capybaraLiquidityPoolMock),
+        ),
       ).to.be.revertedWithCustomError(
         dispatcherContract,
-        ERROR_NAME_ACCESS_CONTROL_UNAUTHORIZED_ACCOUNT
+        ERROR_NAME_ACCESS_CONTROL_UNAUTHORIZED_ACCOUNT,
       ).withArgs(stranger.address, LIQUIDITY_MOVER_ROLE);
     });
   });
