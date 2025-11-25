@@ -16,8 +16,5 @@ node_modules
 # IDE-specific files
 .idea
 
-# Version manager files
-.tool-versions
-
 # Environment variables
 .env
